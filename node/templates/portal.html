@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FILE-SERVER :: Portal</title>
+  <style>
+    body { background:#0a0e0a; color:#c8facc; font-family:"Consolas",monospace; padding:40px; }
+    h1 { color:#39ff14; }
+    a { color:#35e0e0; }
+    .card { border:1px solid #2a5a2a; border-radius:8px; padding:20px 26px; max-width:520px; }
+    code { color:#ffb000; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Acceso concedido</h1>
+    <p>Bienvenido, <code>{{ user }}</code>. Estas dentro del FILE-SERVER.</p>
+    <p>Archivos:</p>
+    <ul>
+      <li>/public</li>
+      <li>/users</li>
+      <li>/logs</li>
+      <li><a href="/restricted/secret.txt">/restricted/secret.txt</a> &larr; objetivo</li>
+    </ul>
+    <p><a href="/logout">cerrar sesion</a></p>
+  </div>
+</body>
+</html>

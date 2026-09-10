@@ -1,0 +1,72 @@
+# ============================================================================
+# Cyber Lab - configuracion de despliegue
+# Copiar a config.toml y ajustar a la red/hardware reales. config.toml NO se versiona.
+# ============================================================================
+
+[modes]
+visual    = true         # panel visual (mapa de red) on/off
+engine    = "simulated"  # "simulated" | "real"
+difficulty= "facil"      # "facil" | "medio" | "dificil" (cuanto te guia)
+autostart = false        # true = saltea el menu de setup (modo kiosco)
+
+[timing]
+mission_seconds   = 300  # duracion de la mision (5 min)
+hint_idle_seconds = 40   # inactividad que dispara una pista progresiva
+typewriter_cps    = 160  # velocidad del efecto de tipeo (chars/segundo)
+
+[network]
+cidr      = "192.168.10.0/24"
+interface = "eth0"       # para arp-scan en linux
+scan_tool = "nmap"       # "nmap" | "arp-scan"
+
+[fileserver]
+ip          = "192.168.10.20"
+http_port   = 80
+ssh_port    = 22
+ssh_user    = "ctf"
+url         = "http://192.168.10.20:80"
+secret_path = "/restricted/secret.txt"
+base_path   = "/srv/lab"     # raiz real del arbol en el nodo (SSH); "/" virtual mapea aca
+
+[creds]
+# Metodo 1 (fuga en HTML): creds que el nodo embebe en el HTML del login.
+leak_user  = "admin"
+leak_pass  = "S3cr3t-2024!"
+# Metodo 3 (fuerza bruta): usuario objetivo + mini-diccionario.
+brute_user = "admin"
+wordlist   = ["123456", "password", "admin", "qwerty", "S3cr3t-2024!", "letmein"]
+
+[serial]
+enabled = true
+port    = "COM3"         # Windows: "COM3"  |  Linux: "/dev/ttyUSB0"
+baud    = 115200
+
+# ---------------------------------------------------------------------------
+# Hosts del laboratorio: alimentan el mapa de red y el scan simulado.
+# role: router | terminal | fileserver | workstation | security
+# ---------------------------------------------------------------------------
+[[hosts]]
+ip   = "192.168.10.1"
+name = "router"
+role = "router"
+
+[[hosts]]
+ip   = "192.168.10.10"
+name = "TERMINAL-VISITANTE"
+role = "terminal"
+
+[[hosts]]
+ip    = "192.168.10.20"
+name  = "FILE-SERVER"
+role  = "fileserver"
+ports = [22, 80, 5000]
+
+[[hosts]]
+ip   = "192.168.10.30"
+name = "WORKSTATION-01"
+role = "workstation"
+
+[[hosts]]
+ip   = "192.168.10.40"
+name = "SECURITY-SERVER"
+role = "security"

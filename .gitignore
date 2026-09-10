@@ -1,0 +1,25 @@
+# Config real del despliegue (IPs/creds/puerto) — usar config.example.toml como plantilla
+config.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+*.manifest
+
+# Node
+node/*.db
+node/**/__pycache__/
+
+# SO / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

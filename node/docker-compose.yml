@@ -1,0 +1,16 @@
+# Levanta el FILE-SERVER vulnerable. En el equipo que hace de nodo:
+#   docker compose up -d --build
+# Reset entre visitantes:  ./reset.sh  (recrea el contenedor, estado limpio)
+services:
+  fileserver:
+    build: .
+    image: cyberlab-fileserver
+    container_name: cyberlab-fileserver
+    ports:
+      - "80:80"     # web vulnerable
+      - "22:22"     # SSH (ls/read). En dev co-locado usar "2222:22" y ssh_port=2222.
+    environment:
+      LAB_USER: admin
+      LAB_PASS: S3cr3t-2024!
+      LAB_BASE: /srv/lab
+    restart: unless-stopped
