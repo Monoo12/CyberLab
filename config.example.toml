@@ -6,7 +6,7 @@
 [modes]
 visual    = true         # panel visual (mapa de red) on/off
 engine    = "simulated"  # "simulated" | "real"
-difficulty= "facil"      # "facil" | "medio" | "dificil" (cuanto te guia)
+difficulty= "facil"      # "facil" | "medio" | "dificil" | "pro" (cuanto/como te guia)
 autostart = false        # true = saltea el menu de setup (modo kiosco)
 
 [timing]

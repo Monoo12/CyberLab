@@ -19,11 +19,11 @@ Para que arranque sola sin menú (kiosco), poné `autostart = true` en `config.t
 |---|---|
 | **Panel visual** | On: muestra el mapa de red animado junto a la terminal. Off: solo terminal (más liviano). |
 | **Motor** | **Simulado**: nada toca la red real (para ensayar o como fallback). **Real**: los comandos corren de verdad. |
-| **Dificultad** | **Fácil**: te guía con el comando + la IP y pistas detalladas. **Medio**: te nombra el comando pero no la IP (la descubrís con `scan`). **Difícil**: no te da comandos ni pistas concretas. |
+| **Dificultad** | **Fácil**: comando simple + la IP concreta. **Medio**: te orienta por concepto, sin comandos obvios ni IP. **Difícil**: pistas con los comandos **reales** (`nmap`, `hydra`, `curl`) sin las IP. **Pro**: sin comandos ni pistas concretas. |
 
 > En **cualquier** dificultad podés escribir tanto los comandos guiados (`scan`, `inspect <ip>`…)
 > como la sintaxis real de las herramientas (`nmap`, `hydra`, `curl`). La dificultad solo cambia
-> cuánto te ayuda la terminal, no qué acepta. En **Difícil**, el `exploit hydra` intenta el binario
+> cuánto te ayuda la terminal, no qué acepta. En **Difícil** y **Pro**, el `exploit hydra` intenta el binario
 > `hydra` real si está instalado.
 
 ## 3. La misión, paso a paso (lo que ve el visitante)
@@ -54,7 +54,7 @@ El objetivo es el login del FILE-SERVER. Hay **tres** maneras de vencerlo; con c
    `config.toml`). Luego se loguea con esas credenciales, o corre `exploit leak`.
 2. **SQL injection** — en el login, poner en *usuario* `' OR '1'='1' -- ` (cualquier clave). O correr
    `exploit sqli`. O el `curl` con ese payload (funciona en cualquier dificultad).
-3. **Fuerza bruta (Hydra)** — `exploit hydra` prueba un mini-diccionario hasta acertar. En Difícil
+3. **Fuerza bruta (Hydra)** — `exploit hydra` prueba un mini-diccionario hasta acertar. En Difícil/Pro
    se escribe el comando `hydra ...` real.
 
 `exploit` sin argumento usa el método por defecto (hydra). Métodos: `exploit leak | sqli | hydra`.

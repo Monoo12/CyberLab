@@ -1,9 +1,11 @@
 """Todo el texto visible de la mision (espanol), ASCII art y pistas.
 
-La dificultad (facil | medio | dificil) cambia CUANTO te guia la terminal:
-  - facil:  te dice el comando y la IP; pistas detalladas; help completo.
-  - medio:  te nombra el comando pero NO la IP (la descubris con scan); help sin IPs.
-  - dificil: no te da comandos; help minimo; pistas vagas.
+La dificultad cambia CUANTO y COMO te guia la terminal:
+  - facil:   comando simple + la IP concreta; pistas muy detalladas.
+  - medio:   te orienta por concepto, sin comandos obvios ni IPs.
+  - dificil: te da pistas de los comandos REALES (nmap, hydra, curl) SIN las IPs.
+  - pro:     no te da comandos ni pistas concretas; solo una idea conceptual.
+El parser acepta las dos sintaxis (guiada y real) en TODAS las dificultades.
 """
 from __future__ import annotations
 
@@ -34,12 +36,17 @@ def briefing(difficulty: str) -> list[str]:
         ]
     elif difficulty == "medio":
         base += [
-            "Escribi  help  para ver los comandos (vas a tener que descubrir las IP vos).",
+            "Escribi  help  para ver los comandos. Las IP y el camino los descubris vos.",
         ]
-    else:  # dificil
+    elif difficulty == "dificil":
         base += [
-            "Sin asistencia. Usa tus conocimientos de redes para llegar al secreto.",
-            "Herramientas reales disponibles. 'pista' da una idea vaga si te trabas.",
+            "Herramientas reales disponibles (nmap, hydra, curl...).",
+            "Escribi  help  para la sintaxis; las IP concretas las sacas del reconocimiento.",
+        ]
+    else:  # pro
+        base += [
+            "Sin asistencia. Usa tus conocimientos para llegar al secreto del FILE-SERVER.",
+            "'pista' apenas te da una idea si te trabas de verdad.",
         ]
     base.append("")
     return base
@@ -84,29 +91,44 @@ HELP_FACIL = [
 ] + _HELP_COMMON_TAIL
 
 HELP_MEDIO = [
-    "Comandos (las IP las descubris con scan):",
+    "Comandos (las IP y el camino los descubris vos):",
     "  scan                     descubrir dispositivos en la red",
     "  inspect <ip>             puertos abiertos de un host",
-    "  connect <ip:puerto>      abrir el servicio web",
+    "  connect <ip:puerto>      abrir un servicio web",
     "  exploit [metodo]         atacar el login",
     "  ls / read / cd           explorar el servidor (tras acceso)",
     "  ping / pwd / whoami / clear / menu / hint",
 ]
 
 HELP_DIFICIL = [
-    "Modo DIFICIL: sin lista de comandos.",
-    "Podes usar herramientas de red reales (nmap, hydra, curl...) o comandos simples.",
+    "Modo DIFICIL -- sintaxis de herramientas reales (sin IPs concretas):",
+    "  nmap -sn <rango>                       descubrir hosts activos",
+    "  nmap -p 22,80,5000 <ip>                escanear puertos",
+    "  connect <ip:puerto>                    abrir el servicio web",
+    "  curl -d \"user=' OR '1'='1' -- \" http://<ip>/login    (SQL injection)",
+    "  hydra -l admin -P wordlist.txt <ip> http-post-form ...  (fuerza bruta)",
+    "  Metodo 'leak': abri el servicio y usa 'Inspeccionar' en el navegador.",
+    "  ls / cd / read  para explorar tras obtener acceso.",
+]
+
+HELP_PRO = [
+    "Modo PRO: sin lista de comandos.",
+    "Podes usar herramientas de red reales o comandos simples.",
     "Escribi 'pista' si estas muy trabado, o 'menu' para bajar la dificultad.",
 ]
 
 
 def help_for(difficulty: str) -> list[str]:
-    return {"facil": HELP_FACIL, "medio": HELP_MEDIO}.get(difficulty, HELP_DIFICIL)
+    return {
+        "facil": HELP_FACIL,
+        "medio": HELP_MEDIO,
+        "dificil": HELP_DIFICIL,
+    }.get(difficulty, HELP_PRO)
 
 
 # ------------------------- PISTAS por dificultad -----------------------
-# state -> texto. facil menciona comando + contexto; medio solo el comando;
-# dificil una idea conceptual sin nombrar el comando.
+# facil: comando simple + IP.  medio: concepto sin comando obvio ni IP.
+# dificil: comando REAL sin IP.  pro: idea conceptual, sin comandos.
 _HINTS_FACIL = {
     "briefing": "Pista: empeza con  scan  para ver que dispositivos hay en la red.",
     "scanned": "Pista: el objetivo es el FILE-SERVER. Usa  inspect <ip>  sobre su IP.",
@@ -116,14 +138,22 @@ _HINTS_FACIL = {
     "listed": "Pista: el archivo esta en /restricted. Proba  read /restricted/secret.txt",
 }
 _HINTS_MEDIO = {
-    "briefing": "Pista: hay que descubrir la red primero (scan).",
-    "scanned": "Pista: identifica los puertos del servidor objetivo (inspect).",
-    "inspected": "Pista: conecta al servicio web que encontraste (connect).",
-    "connected": "Pista: el login tiene mas de una debilidad. Inspecciona el HTML o usa exploit.",
-    "exploited": "Pista: explora el sistema de archivos (ls, cd).",
-    "listed": "Pista: busca en la carpeta restringida y leela (read).",
+    "briefing": "Pista: todavia no sabes que hay en la red. Empeza por mapearla.",
+    "scanned": "Pista: no todos los equipos son el objetivo; interesa el que guarda archivos, y que servicios expone.",
+    "inspected": "Pista: uno de esos puertos sirve una web. Es tu puerta de entrada.",
+    "connected": "Pista: el login no es tan seguro como parece. Hay mas de una forma de entrar.",
+    "exploited": "Pista: ahora sos otro usuario. Recorre sus carpetas.",
+    "listed": "Pista: lo valioso suele estar donde dice 'restringido'.",
 }
 _HINTS_DIFICIL = {
+    "briefing": "Pista: descubri hosts activos con  nmap -sn <rango>  (o arp-scan).",
+    "scanned": "Pista: escanea los puertos del objetivo con  nmap -p 22,80,5000 <ip>.",
+    "inspected": "Pista: hay un HTTP abierto. Abrilo (connect <ip:puerto>) e inspecciona el HTML.",
+    "connected": "Pista: el login es vulnerable. Proba SQLi (curl con ' OR '1'='1) o fuerza bruta (hydra ... http-post-form).",
+    "exploited": "Pista: ya tenes shell. Enumera el filesystem (ls, cd) buscando lo restringido.",
+    "listed": "Pista: leé el archivo objetivo con  read /restricted/secret.txt  (o cat).",
+}
+_HINTS_PRO = {
     "briefing": "Pista: no sabes que hay en la red. Averigualo.",
     "scanned": "Pista: cada host expone servicios en ciertos puertos.",
     "inspected": "Pista: un servicio web se accede desde un navegador.",
@@ -134,35 +164,55 @@ _HINTS_DIFICIL = {
 
 
 def hint_for(difficulty: str, state: str) -> str | None:
-    table = {"facil": _HINTS_FACIL, "medio": _HINTS_MEDIO}.get(difficulty, _HINTS_DIFICIL)
+    table = {
+        "facil": _HINTS_FACIL,
+        "medio": _HINTS_MEDIO,
+        "dificil": _HINTS_DIFICIL,
+    }.get(difficulty, _HINTS_PRO)
     return table.get(state)
 
 
 # ------------------- NUDGES tras cada comando (gated) ------------------
-# Devuelve el texto de guia post-comando segun dificultad, o None si no corresponde.
+# Guia automatica post-comando segun dificultad, o None si no corresponde.
 def nudge(difficulty: str, key: str, ip: str = "") -> str | None:
-    if difficulty == "dificil":
+    if difficulty == "pro":
         return None
-    if key == "inspect_to_connect":
-        if difficulty == "facil":
-            return "[+] El puerto 80 (http) sirve una web. Proba: connect " + ip + ":80"
-        return "[+] Hay un servicio web. Conectate a el."
+
     if key == "scan_done":
         if difficulty == "facil":
             return "[+] Objetivo probable: FILE-SERVER (" + ip + ")."
-        return "[+] Uno de estos es el objetivo. Inspecciona sus puertos."
+        if difficulty == "medio":
+            return "[+] Uno de estos es el objetivo. Fijate cual expone servicios interesantes."
+        return "[+] Elegi el objetivo y escanea sus puertos:  nmap -p 22,80,5000 <ip>"  # dificil
+
+    if key == "inspect_to_connect":
+        if difficulty == "facil":
+            return "[+] El puerto 80 (http) sirve una web. Proba: connect " + ip + ":80"
+        if difficulty == "medio":
+            return "[+] Hay un servicio web ahi. Es tu puerta de entrada."
+        return "[+] HTTP abierto: abrilo con  connect <ip:80>  e inspecciona el HTML."  # dificil
+
     if key == "connect_tip":
         if difficulty == "facil":
             return "    Tip: proba 'Inspeccionar' (click derecho) para ver datos ocultos, o usa 'exploit'."
-        return "    Tip: mira bien la pagina y su codigo fuente."
+        if difficulty == "medio":
+            return "    Tip: mira bien la pagina; el login tiene mas de una debilidad."
+        return "    Tip: SQLi (' OR '1'='1), fuerza bruta (hydra), o creds filtradas en el HTML."  # dificil
+
     if key == "exploited":
         if difficulty == "facil":
             return "[+] Ya estas dentro. Usa 'ls' para explorar y 'cd' para entrar a las carpetas."
-        return "[+] Acceso conseguido. Explora el servidor."
+        if difficulty == "medio":
+            return "[+] Acceso conseguido. Recorre el servidor."
+        return "[+] Shell obtenida. Enumera el filesystem (ls, cd)."  # dificil
+
     if key == "found_restricted":
         if difficulty == "facil":
             return "[+] Hay una carpeta 'restricted'. Proba: read /restricted/secret.txt"
-        return "[+] Algo parece restringido..."
+        if difficulty == "medio":
+            return "[+] Algo parece restringido..."
+        return "[+] Objetivo probable en /restricted (read/cat)."  # dificil
+
     return None
 
 

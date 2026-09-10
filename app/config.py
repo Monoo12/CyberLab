@@ -14,7 +14,7 @@ from pathlib import Path
 from app.backend.models import Host
 
 VALID_ENGINES = ("simulated", "real")
-VALID_DIFFICULTIES = ("facil", "medio", "dificil")
+VALID_DIFFICULTIES = ("facil", "medio", "dificil", "pro")
 
 
 @dataclass

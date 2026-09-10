@@ -10,7 +10,7 @@ from app.ui import theme
 
 _ENGINE_LABELS = {"Simulado": "simulated", "Real": "real"}
 _ENGINE_LABELS_INV = {v: k for k, v in _ENGINE_LABELS.items()}
-_DIFF_LABELS = {"Facil": "facil", "Medio": "medio", "Dificil": "dificil"}
+_DIFF_LABELS = {"Facil": "facil", "Medio": "medio", "Dificil": "dificil", "Pro": "pro"}
 _DIFF_LABELS_INV = {v: k for k, v in _DIFF_LABELS.items()}
 
 
@@ -55,7 +55,8 @@ class SetupMenu(ctk.CTkFrame):
             selected_color=theme.GREEN, selected_hover_color=theme.GREEN)
         self.diff_seg.set(_DIFF_LABELS_INV.get(cfg.modes.difficulty, "Facil"))
         self.diff_seg.grid(row=4, column=1, sticky="e", padx=(20, 36))
-        ctk.CTkLabel(wrap, text="Facil: te guia  ·  Medio: sin IPs  ·  Dificil: sin ayuda",
+        ctk.CTkLabel(wrap,
+                     text="Facil: comando+IP  ·  Medio: por concepto  ·  Dificil: comandos reales  ·  Pro: solo",
                      text_color=theme.DIM, font=("Consolas", 11)).grid(
             row=5, column=0, columnspan=2, pady=(0, 6))
 
