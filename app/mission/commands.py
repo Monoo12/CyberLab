@@ -112,18 +112,32 @@ class CommandParser:
         if m:
             return self._make_inspect(m.group(1))
 
-        # ---- exploit (guiado / hydra / curl) ----
-        m = re.fullmatch(r"exploit(?:\s+(\w+))?", low)
+        # ---- exploit <ip> [metodo]  (guiado) ----
+        m = re.fullmatch(r"exploit(?:\s+(\S+))?(?:\s+(\w+))?", low)
         if m:
-            method = m.group(1)
-            if method and method not in VALID_METHODS:
-                return ParsedCommand("exploit", error=f"metodo desconocido '{method}' (leak | sqli | hydra)")
-            return ParsedCommand("exploit", method=method)
-        if re.search(r"\bhydra\b", low):
-            return ParsedCommand("exploit", method="hydra")
-        if re.search(r"\bcurl\b", low):
-            method = "sqli" if ("'1'='1" in low or "1=1" in low or "--" in low) else "sqli"
-            return ParsedCommand("exploit", method=method)
+            a1, a2 = m.group(1), m.group(2)
+            if a1 is None:
+                return ParsedCommand("exploit", ip=None)  # sin IP -> flow muestra el uso
+            ipm = re.fullmatch(rf"{_IP}(?::\d+)?", a1)
+            if ipm:
+                ip = ipm.group(1)
+                if not self.ip_in_lab(ip):
+                    return ParsedCommand("exploit", error=f"IP fuera del laboratorio: {ip}")
+                if a2 and a2 not in VALID_METHODS:
+                    return ParsedCommand("exploit", error=f"metodo desconocido '{a2}' (leak | sqli | hydra)")
+                return ParsedCommand("exploit", ip=ip, method=a2)
+            if a1 in VALID_METHODS:
+                return ParsedCommand("exploit", error="falta la IP:  exploit <ip> [leak|sqli|hydra]")
+            return ParsedCommand("exploit", error="uso:  exploit <ip> [leak|sqli|hydra]")
+
+        # ---- hydra / curl (sintaxis real): extraen la IP del objetivo ----
+        if re.search(r"\bhydra\b", low) or re.search(r"\bcurl\b", low):
+            method = "hydra" if re.search(r"\bhydra\b", low) else "sqli"
+            ipm = re.search(_IP, low)
+            ip = ipm.group(1) if ipm else None
+            if ip and not self.ip_in_lab(ip):
+                return ParsedCommand("exploit", error=f"IP fuera del laboratorio: {ip}")
+            return ParsedCommand("exploit", ip=ip, method=method)
 
         return ParsedCommand("empty", error=f"comando no reconocido: {text}")
 

@@ -85,7 +85,7 @@ HELP_FACIL = [
     "  scan                     descubrir dispositivos en la red",
     "  inspect <ip>             ver puertos abiertos de un dispositivo",
     "  connect <ip:puerto>      abrir el servicio en el navegador real",
-    "  exploit [metodo]         atacar el login  (leak | sqli | hydra)",
+    "  exploit <ip> [metodo]    atacar el login de un host (leak | sqli | hydra)",
     "  ls [ruta]                listar archivos del servidor (tras exploit)",
     "  read <ruta>              leer un archivo del servidor (tras exploit)",
 ] + _HELP_COMMON_TAIL
@@ -95,7 +95,7 @@ HELP_MEDIO = [
     "  scan                     descubrir dispositivos en la red",
     "  inspect <ip>             puertos abiertos de un host",
     "  connect <ip:puerto>      abrir un servicio web",
-    "  exploit [metodo]         atacar el login",
+    "  exploit <ip> [metodo]    atacar el login de un host",
     "  ls / read / cd           explorar el servidor (tras acceso)",
     "  ping / pwd / whoami / clear / menu / hint",
 ]
@@ -133,7 +133,7 @@ _HINTS_FACIL = {
     "briefing": "Pista: empeza con  scan  para ver que dispositivos hay en la red.",
     "scanned": "Pista: el objetivo es el FILE-SERVER. Usa  inspect <ip>  sobre su IP.",
     "inspected": "Pista: el puerto 80 es web. Proba  connect <ip:80>  para abrir el servicio.",
-    "connected": "Pista: en la pagina, proba 'Inspeccionar' para buscar datos ocultos, o usa  exploit.",
+    "connected": "Pista: en la pagina, proba 'Inspeccionar' para datos ocultos, o usa  exploit <ip>  (la IP del servidor).",
     "exploited": "Pista: ya tenes acceso. Usa  ls  para mirar las carpetas y  cd  para entrar.",
     "listed": "Pista: el archivo esta en /restricted. Proba  read /restricted/secret.txt",
 }
@@ -194,7 +194,7 @@ def nudge(difficulty: str, key: str, ip: str = "") -> str | None:
 
     if key == "connect_tip":
         if difficulty == "facil":
-            return "    Tip: proba 'Inspeccionar' (click derecho) para ver datos ocultos, o usa 'exploit'."
+            return "    Tip: proba 'Inspeccionar' (click derecho) para ver datos ocultos, o usa 'exploit <ip>'."
         if difficulty == "medio":
             return "    Tip: mira bien la pagina; el login tiene mas de una debilidad."
         return "    Tip: SQLi (' OR '1'='1), fuerza bruta (hydra), o creds filtradas en el HTML."  # dificil
@@ -219,4 +219,4 @@ def nudge(difficulty: str, key: str, ip: str = "") -> str | None:
 RUN_SCAN = "[*] Escaneando la red en busca de dispositivos activos..."
 RUN_INSPECT = "[*] Escaneando puertos de {ip}..."
 RUN_CONNECT = "[*] Abriendo {url} en el navegador..."
-RUN_EXPLOIT = "[*] Lanzando exploit ({method}) contra el FILE-SERVER..."
+RUN_EXPLOIT = "[*] Lanzando exploit ({method}) contra {ip}..."

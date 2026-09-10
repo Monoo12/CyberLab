@@ -74,12 +74,15 @@ class RealBackend(NetworkBackend):
         return InspectResult(ip=ip, ports=results)
 
     # ----------------------------- exploit ----------------------------
-    def exploit(self, method: str) -> ExploitResult:
+    def exploit(self, ip: str, method: str) -> ExploitResult:
+        # El ataque apunta a la IP indicada: si no es el FILE-SERVER vulnerable,
+        # las peticiones HTTP fallan y el exploit devuelve fallo (comportamiento real).
+        base_url = "http://%s:%s" % (ip, self.cfg.fileserver.http_port)
         if method == "leak":
-            return html_leak.run(self.cfg)
+            return html_leak.run(self.cfg, base_url)
         if method == "sqli":
-            return sqli.run(self.cfg)
-        return bruteforce.run(self.cfg)
+            return sqli.run(self.cfg, base_url)
+        return bruteforce.run(self.cfg, base_url)
 
     # ------------------------------ SSH -------------------------------
     def _ssh_client(self):

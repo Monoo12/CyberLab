@@ -27,8 +27,9 @@ class NetworkBackend(ABC):
         """Escanea puertos de un host (nmap -p ...)."""
 
     @abstractmethod
-    def exploit(self, method: str) -> ExploitResult:
-        """Ejecuta una de las 3 tecnicas: 'leak' | 'sqli' | 'hydra'."""
+    def exploit(self, ip: str, method: str) -> ExploitResult:
+        """Ataca el servicio de `ip` con una de las 3 tecnicas: 'leak'|'sqli'|'hydra'.
+        Solo el FILE-SERVER es vulnerable; contra otra IP el ataque falla."""
 
     @abstractmethod
     def ls(self, path: str) -> LsResult:

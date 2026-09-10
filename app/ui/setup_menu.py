@@ -1,6 +1,8 @@
-"""Menu de configuracion previo a la mision (seccion 9): tres toggles + Start.
+"""Menu de configuracion previo a la mision (seccion 9): tres ajustes + Start.
 
-Toma los defaults de config.toml; con autostart=true la app lo saltea (kiosco).
+Layout en columna (etiqueta arriba, control full-width abajo) para que los botones
+segmentados NO se corten con el escalado/DPI de Windows. Toma los defaults de
+config.toml; con autostart=true la app lo saltea (kiosco).
 """
 from __future__ import annotations
 
@@ -12,6 +14,8 @@ _ENGINE_LABELS = {"Simulado": "simulated", "Real": "real"}
 _ENGINE_LABELS_INV = {v: k for k, v in _ENGINE_LABELS.items()}
 _DIFF_LABELS = {"Facil": "facil", "Medio": "medio", "Dificil": "dificil", "Pro": "pro"}
 _DIFF_LABELS_INV = {v: k for k, v in _DIFF_LABELS.items()}
+_VISUAL_LABELS = {"Encendido": True, "Apagado": False}
+_VISUAL_LABELS_INV = {True: "Encendido", False: "Apagado"}
 
 
 class SetupMenu(ctk.CTkFrame):
@@ -23,50 +27,63 @@ class SetupMenu(ctk.CTkFrame):
         wrap = ctk.CTkFrame(self, fg_color=theme.BG_PANEL, corner_radius=16,
                             border_color=theme.GREEN, border_width=2)
         wrap.place(relx=0.5, rely=0.5, anchor="center")
+        # ancho minimo garantizado para que los botones segmentados NO se corten;
+        # el alto se ajusta solo al contenido (sin fijarlo a mano).
+        wrap.grid_columnconfigure(0, weight=1, minsize=560)
 
-        ctk.CTkLabel(wrap, text="C Y B E R   L A B", text_color=theme.GREEN,
-                     font=("Consolas", 34, "bold")).grid(row=0, column=0, columnspan=2,
-                                                          padx=48, pady=(34, 4))
-        ctk.CTkLabel(wrap, text="Configuracion de la estacion", text_color=theme.DIM,
-                     font=("Consolas", 14)).grid(row=1, column=0, columnspan=2, pady=(0, 24))
+        row = [0]
 
-        # Panel visual
-        ctk.CTkLabel(wrap, text="Panel visual (mapa de red)", text_color=theme.FG,
-                     font=("Consolas", 15)).grid(row=2, column=0, sticky="w", padx=(36, 20), pady=12)
-        self.visual_sw = ctk.CTkSwitch(wrap, text="", progress_color=theme.GREEN,
-                                       onvalue=True, offvalue=False)
-        self.visual_sw.grid(row=2, column=1, sticky="e", padx=(20, 36))
-        (self.visual_sw.select if cfg.modes.visual else self.visual_sw.deselect)()
+        def add(widget, pady=(0, 4), padx=40):
+            widget.grid(row=row[0], column=0, sticky="ew", padx=padx, pady=pady)
+            row[0] += 1
 
-        # Motor
-        ctk.CTkLabel(wrap, text="Motor de ejecucion", text_color=theme.FG,
-                     font=("Consolas", 15)).grid(row=3, column=0, sticky="w", padx=(36, 20), pady=12)
+        add(ctk.CTkLabel(wrap, text="C Y B E R   L A B", text_color=theme.GREEN,
+                         font=("Consolas", 34, "bold")), pady=(30, 2))
+        add(ctk.CTkLabel(wrap, text="Configuracion de la estacion", text_color=theme.DIM,
+                         font=("Consolas", 14)), pady=(0, 22))
+
+        # --- Panel visual ---
+        add(ctk.CTkLabel(wrap, text="Panel visual (mapa de red)", text_color=theme.FG,
+                         font=("Consolas", 15), anchor="w"), pady=(6, 4))
+        self.visual_seg = ctk.CTkSegmentedButton(
+            wrap, values=list(_VISUAL_LABELS.keys()), height=40,
+            font=("Consolas", 15), selected_color=theme.GREEN,
+            selected_hover_color=theme.GREEN)
+        self.visual_seg.set(_VISUAL_LABELS_INV.get(bool(cfg.modes.visual), "Encendido"))
+        add(self.visual_seg, pady=(0, 14))
+
+        # --- Motor ---
+        add(ctk.CTkLabel(wrap, text="Motor de ejecucion", text_color=theme.FG,
+                         font=("Consolas", 15), anchor="w"), pady=(6, 4))
         self.engine_seg = ctk.CTkSegmentedButton(
-            wrap, values=list(_ENGINE_LABELS.keys()),
-            selected_color=theme.GREEN, selected_hover_color=theme.GREEN)
+            wrap, values=list(_ENGINE_LABELS.keys()), height=40,
+            font=("Consolas", 15), selected_color=theme.GREEN,
+            selected_hover_color=theme.GREEN)
         self.engine_seg.set(_ENGINE_LABELS_INV.get(cfg.modes.engine, "Simulado"))
-        self.engine_seg.grid(row=3, column=1, sticky="e", padx=(20, 36))
+        add(self.engine_seg, pady=(0, 14))
 
-        # Dificultad
-        ctk.CTkLabel(wrap, text="Dificultad", text_color=theme.FG,
-                     font=("Consolas", 15)).grid(row=4, column=0, sticky="w", padx=(36, 20), pady=12)
+        # --- Dificultad ---
+        add(ctk.CTkLabel(wrap, text="Dificultad", text_color=theme.FG,
+                         font=("Consolas", 15), anchor="w"), pady=(6, 4))
         self.diff_seg = ctk.CTkSegmentedButton(
-            wrap, values=list(_DIFF_LABELS.keys()),
-            selected_color=theme.GREEN, selected_hover_color=theme.GREEN)
+            wrap, values=list(_DIFF_LABELS.keys()), height=44,
+            font=("Consolas", 16, "bold"), selected_color=theme.GREEN,
+            selected_hover_color=theme.GREEN)
         self.diff_seg.set(_DIFF_LABELS_INV.get(cfg.modes.difficulty, "Facil"))
-        self.diff_seg.grid(row=4, column=1, sticky="e", padx=(20, 36))
-        ctk.CTkLabel(wrap,
-                     text="Facil: comando+IP  ·  Medio: por concepto  ·  Dificil: comandos reales  ·  Pro: solo",
-                     text_color=theme.DIM, font=("Consolas", 11)).grid(
-            row=5, column=0, columnspan=2, pady=(0, 6))
+        add(self.diff_seg, pady=(0, 4))
+        add(ctk.CTkLabel(
+            wrap,
+            text="Facil: comando+IP   Medio: por concepto   Dificil: comandos reales   Pro: solo",
+            text_color=theme.DIM, font=("Consolas", 11), anchor="w"), pady=(0, 8))
 
+        # --- Start ---
         start = ctk.CTkButton(wrap, text="COMENZAR", fg_color=theme.GREEN, hover_color="#2ecc12",
-                              text_color="#04140a", font=("Consolas", 18, "bold"),
+                              text_color="#04140a", font=("Consolas", 20, "bold"), height=52,
                               command=self._start)
-        start.grid(row=6, column=0, columnspan=2, pady=(22, 34), ipadx=30, ipady=6)
+        add(start, pady=(14, 30))
 
     def _start(self):
-        self.cfg.modes.visual = bool(self.visual_sw.get())
+        self.cfg.modes.visual = _VISUAL_LABELS.get(self.visual_seg.get(), True)
         self.cfg.modes.engine = _ENGINE_LABELS.get(self.engine_seg.get(), "simulated")
         self.cfg.modes.difficulty = _DIFF_LABELS.get(self.diff_seg.get(), "facil")
         self.on_start()

@@ -33,7 +33,7 @@ Para que arranque sola sin menú (kiosco), poné `autostart = true` en `config.t
 2. `scan` → descubre los dispositivos de la red (tabla NETWORK DISCOVERY; se encienden los LEDs).
 3. `inspect <ip>` → puertos abiertos del objetivo (se ilumina su tramo).
 4. `connect <ip:80>` → abre el **navegador real** con la web del servidor.
-5. `exploit` → vence el login (animación intensa de LEDs) y da acceso.
+5. `exploit <ip>` → ataca el login del host indicado (hay que dar la IP del FILE-SERVER); animación intensa de LEDs y da acceso.
 6. `ls` / `cd <carpeta>` → explora las carpetas del servidor (con directorio actual).
 7. `read /restricted/secret.txt` → obtiene el archivo secreto (animación de transferencia).
 8. **Mission Complete**: resumen + explicación.
@@ -51,13 +51,13 @@ El objetivo es el login del FILE-SERVER. Hay **tres** maneras de vencerlo; con c
 
 1. **Credenciales filtradas en el HTML** — en el paso `connect`, click derecho → *Inspeccionar*:
    el usuario y la clave están en un comentario del HTML y en un campo oculto (`admin` / la clave de
-   `config.toml`). Luego se loguea con esas credenciales, o corre `exploit leak`.
+   `config.toml`). Luego se loguea con esas credenciales, o corre `exploit <ip> leak`.
 2. **SQL injection** — en el login, poner en *usuario* `' OR '1'='1' -- ` (cualquier clave). O correr
-   `exploit sqli`. O el `curl` con ese payload (funciona en cualquier dificultad).
-3. **Fuerza bruta (Hydra)** — `exploit hydra` prueba un mini-diccionario hasta acertar. En Difícil/Pro
+   `exploit <ip> sqli`. O el `curl` con ese payload (funciona en cualquier dificultad).
+3. **Fuerza bruta (Hydra)** — `exploit <ip> hydra` prueba un mini-diccionario hasta acertar. En Difícil/Pro
    se escribe el comando `hydra ...` real.
 
-`exploit` sin argumento usa el método por defecto (hydra). Métodos: `exploit leak | sqli | hydra`.
+`exploit <ip>` requiere la IP del objetivo; sin método usa el default (hydra). Métodos: `exploit <ip> leak | sqli | hydra`. Atacar la IP equivocada falla (no es vulnerable).
 
 ## 5. Reset entre visitantes
 

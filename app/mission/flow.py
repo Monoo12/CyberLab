@@ -145,7 +145,7 @@ class MissionController:
             "scan": self._cmd_scan,
             "inspect": lambda: self._cmd_inspect(pc.ip),
             "connect": lambda: self._cmd_connect(pc.ip, pc.port),
-            "exploit": lambda: self._cmd_exploit(pc.method),
+            "exploit": lambda: self._cmd_exploit(pc.ip, pc.method),
             "ping": lambda: self._cmd_ping(pc.ip),
             "cd": lambda: self._cmd_cd(pc.path),
             "ls": lambda: self._cmd_ls(pc.path),
@@ -245,19 +245,26 @@ class MissionController:
         self.state = CONNECTED
 
     # ================= exploit =================
-    def _cmd_exploit(self, method):
-        if self.state in (BRIEFING, SCANNED):
-            self.term.writeln("[!] Primero identifica el servicio (inspect / connect).", tag="amber")
+    def _cmd_exploit(self, ip, method):
+        if not self.hosts:
+            self.term.writeln("[!] Primero descubri la red (scan).", tag="amber")
+            return
+        if not ip:
+            self.term.writeln("[!] uso:  exploit <ip> [leak|sqli|hydra]", tag="amber")
+            self.term.writeln("    indica la IP del servidor a atacar.", tag="dim")
             return
         method = method or "hydra"
-        if self.netmap:
-            self.netmap.pulse_role("fileserver", times=10, color=theme.AMBER)
-        self.leds.animate_segments(seg.segments_for_role("fileserver"), seg.ANIM_EXPLOIT)
+        host = self.cfg.host_by_ip(ip)
+        role = host.role if host else "unknown"
+        if self.netmap and role != "unknown":
+            self.netmap.pulse_role(role, times=10, color=theme.AMBER)
+        self.leds.animate_segments(seg.segments_for_role(role), seg.ANIM_EXPLOIT)
+        self.target_ip = ip
         self._busy(True)
         self.term.type_lines([
-            script.RUN_EXPLOIT.format(method=method),
+            script.RUN_EXPLOIT.format(method=method, ip=ip),
             "  [" + "#" * 28 + "] 100%",
-        ], tag="dim", on_done=lambda: self._async(lambda: self.backend.exploit(method),
+        ], tag="dim", on_done=lambda: self._async(lambda: self.backend.exploit(ip, method),
                                                   self._exploit_done))
 
     def _exploit_done(self, res):

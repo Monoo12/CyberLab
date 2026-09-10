@@ -124,9 +124,18 @@ class SimulatedBackend(NetworkBackend):
         results = [PortResult(p, "open", _SERVICE_BY_PORT.get(p, "unknown")) for p in ports]
         return InspectResult(ip=ip, ports=results)
 
-    def exploit(self, method: str) -> ExploitResult:
+    def exploit(self, ip: str, method: str) -> ExploitResult:
         fs = self.cfg.fileserver
         creds = self.cfg.creds
+        if ip != fs.ip:
+            time.sleep(0.6)
+            host = self.cfg.host_by_ip(ip)
+            name = host.name if host else ip
+            return ExploitResult(False, method, [
+                "[*] Objetivo: " + ip + " (" + name + ")",
+                "[!] El servicio en " + ip + " no respondio o no es vulnerable.",
+                "[!] Estas seguro de que es el servidor correcto?",
+            ])
         if method == "leak":
             time.sleep(0.6)
             out = [
