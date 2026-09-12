@@ -74,7 +74,17 @@ class SetupMenu(ctk.CTkFrame):
         add(ctk.CTkLabel(
             wrap,
             text="Facil: comando+IP   Medio: por concepto   Dificil: comandos reales   Pro: solo",
-            text_color=theme.DIM, font=("Consolas", 11), anchor="w"), pady=(0, 8))
+            text_color=theme.DIM, font=("Consolas", 11), anchor="w"), pady=(0, 12))
+
+        # --- Modo libre ---
+        add(ctk.CTkLabel(wrap, text="Modo libre (tiempo infinito, todo hackeable)",
+                         text_color=theme.FG, font=("Consolas", 15), anchor="w"), pady=(6, 4))
+        self.free_seg = ctk.CTkSegmentedButton(
+            wrap, values=["Mision", "Libre"], height=40,
+            font=("Consolas", 15), selected_color=theme.CYAN,
+            selected_hover_color=theme.CYAN)
+        self.free_seg.set("Libre" if cfg.modes.free_mode else "Mision")
+        add(self.free_seg, pady=(0, 12))
 
         # --- Start ---
         start = ctk.CTkButton(wrap, text="COMENZAR", fg_color=theme.GREEN, hover_color="#2ecc12",
@@ -86,4 +96,5 @@ class SetupMenu(ctk.CTkFrame):
         self.cfg.modes.visual = _VISUAL_LABELS.get(self.visual_seg.get(), True)
         self.cfg.modes.engine = _ENGINE_LABELS.get(self.engine_seg.get(), "simulated")
         self.cfg.modes.difficulty = _DIFF_LABELS.get(self.diff_seg.get(), "facil")
+        self.cfg.modes.free_mode = (self.free_seg.get() == "Libre")
         self.on_start()

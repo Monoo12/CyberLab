@@ -20,6 +20,7 @@ Para que arranque sola sin menú (kiosco), poné `autostart = true` en `config.t
 | **Panel visual** | On: muestra el mapa de red animado junto a la terminal. Off: solo terminal (más liviano). |
 | **Motor** | **Simulado**: nada toca la red real (para ensayar o como fallback). **Real**: los comandos corren de verdad. |
 | **Dificultad** | **Fácil**: comando simple + la IP concreta. **Medio**: te orienta por concepto, sin comandos obvios ni IP. **Difícil**: pistas con los comandos **reales** (`nmap`, `hydra`, `curl`) sin las IP. **Pro**: sin comandos ni pistas concretas. |
+| **Modo libre** | **Misión**: objetivo el FILE-SERVER, 5 min. **Libre**: tiempo infinito, sin orden, y **todos los dispositivos son hackeables** (cada uno con su propia FLAG). Se combina con cualquier dificultad. |
 
 > En **cualquier** dificultad podés escribir tanto los comandos guiados (`scan`, `inspect <ip>`…)
 > como la sintaxis real de las herramientas (`nmap`, `hydra`, `curl`). La dificultad solo cambia
@@ -39,8 +40,11 @@ Para que arranque sola sin menú (kiosco), poné `autostart = true` en `config.t
 8. **Mission Complete**: resumen + explicación.
    - **Enter** (o clic) → jugar de nuevo. **M** → volver al menú (cambiar dificultad).
 
-**Otros comandos** disponibles en la terminal: `ping <ip>`, `pwd`, `whoami`, `clear`, y `menu`
-(volver al menú de configuración en cualquier momento).
+**Otros comandos** en la terminal: `ping <ip>`, `pwd`, `whoami`, `clear`, `menu`.
+**Recon extra** (desde nivel **Medio**, y en Modo Libre — en **Fácil no aparecen**): `telnet <ip> [puerto]`,
+`traceroute <ip>`, `arp`, `netstat`, e `inspect -v <ip>` (versiones de servicios).
+
+**Como consola real:** **TAB** autocompleta comandos, IPs y rutas; **↑/↓** navegan el historial; **Ctrl+L** limpia.
 
 Si el visitante queda inactivo (~40 s configurable), la terminal ofrece una **pista** según el paso
 y la dificultad. También puede escribir `hint` o `help` cuando quiera.

@@ -142,6 +142,9 @@ class MissionApp:
         self.controller.on_any_key()
 
     def _on_timer(self, remaining):
+        if remaining is None:   # modo libre: tiempo infinito
+            self.timer_label.configure(text="MODO LIBRE", text_color=theme.CYAN)
+            return
         m, s = divmod(max(0, remaining), 60)
         self.timer_label.configure(text="TIEMPO %02d:%02d" % (m, s))
         self.timer_label.configure(text_color=theme.RED if remaining <= 60 else theme.GREEN)

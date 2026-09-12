@@ -30,7 +30,7 @@ python -m app.main --engine simulated
 Se abre el menú de setup (panel visual, motor Real/Simulado, dificultad Fácil/Medio/Difícil) y luego la
 misión. `F11` alterna pantalla completa; `Esc` sale de pantalla completa.
 
-Flags útiles: `--autostart` (salta el menú, modo kiosco), `--difficulty medio`, `--no-visual`.
+Flags útiles: `--autostart` (salta el menú, modo kiosco), `--difficulty medio`, `--free` (modo libre), `--no-visual`.
 
 ## Modo Real (en la red del laboratorio)
 

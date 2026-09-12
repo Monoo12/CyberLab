@@ -23,32 +23,47 @@ class NetworkBackend(ABC):
         """Descubre hosts en la red (nmap -sn / arp-scan)."""
 
     @abstractmethod
-    def inspect(self, ip: str) -> InspectResult:
-        """Escanea puertos de un host (nmap -p ...)."""
+    def inspect(self, ip: str, versions: bool = False) -> InspectResult:
+        """Escanea puertos de un host (nmap -p / -sV). `versions` agrega version del servicio."""
 
     @abstractmethod
     def exploit(self, ip: str, method: str) -> ExploitResult:
-        """Ataca el servicio de `ip` con una de las 3 tecnicas: 'leak'|'sqli'|'hydra'.
-        Solo el FILE-SERVER es vulnerable; contra otra IP el ataque falla."""
+        """Ataca el servicio de `ip` ('leak'|'sqli'|'hydra'). En la mision solo el
+        FILE-SERVER es vulnerable; en Modo Libre todos los dispositivos con perfil."""
 
     @abstractmethod
-    def ls(self, path: str) -> LsResult:
-        """Lista un directorio del file-server (SSH)."""
+    def ls(self, ip: str, path: str) -> LsResult:
+        """Lista un directorio del host `ip` (SSH)."""
 
     @abstractmethod
-    def read(self, path: str) -> ReadResult:
-        """Lee un archivo del file-server (SSH)."""
+    def read(self, ip: str, path: str) -> ReadResult:
+        """Lee un archivo del host `ip` (SSH)."""
 
-    def is_dir(self, path: str) -> bool:
-        """True si `path` es un directorio (para validar `cd`). Default: via ls."""
+    def is_dir(self, ip: str, path: str) -> bool:
+        """True si `path` es un directorio en `ip` (para validar `cd`)."""
         try:
-            return len(self.ls(path).entries) > 0 or path.rstrip("/") in ("", "/")
+            return len(self.ls(ip, path).entries) > 0 or path.rstrip("/") in ("", "/")
         except Exception:
             return False
 
+    def fs_names(self, ip: str, path: str) -> list[str]:
+        """Nombres de un directorio para autocompletar rutas (sin bloquear). Default: vacio."""
+        return []
+
     def ping(self, ip: str) -> list[str]:
-        """Devuelve lineas de salida de un ping (real o simulado)."""
         return [f"PING {ip}: sin implementar"]
+
+    def telnet(self, ip: str, port: int) -> list[str]:
+        return [f"telnet {ip}:{port}: sin implementar"]
+
+    def traceroute(self, ip: str) -> list[str]:
+        return [f"traceroute {ip}: sin implementar"]
+
+    def arp(self, ips) -> list[str]:
+        return ["arp: sin implementar"]
+
+    def netstat(self, ip: str) -> list[str]:
+        return ["netstat: sin implementar"]
 
     # `connect` es identico en ambos motores: abre el navegador real.
     def connect(self, ip: str, port: int):

@@ -19,7 +19,18 @@ BANNER = r"""
 """
 
 
-def briefing(difficulty: str) -> list[str]:
+def briefing(difficulty: str, free: bool = False) -> list[str]:
+    if free:
+        return [
+            "[ MODO LIBRE ]  Sin objetivo forzado y sin limite de tiempo.",
+            "",
+            "Toda la red esta a tu disposicion: escanea, inspecciona y hackea",
+            "cualquier dispositivo (router, workstation, security, file-server).",
+            "Cada uno tiene su propia debilidad y su propia FLAG para capturar.",
+            "",
+            "Escribi  help  para ver los comandos.  'menu' para salir.",
+            "",
+        ]
     base = [
         "[ SISTEMA DE MONITOREO ]  Actividad sospechosa detectada en la red.",
         "",
@@ -117,13 +128,35 @@ HELP_PRO = [
     "Escribi 'pista' si estas muy trabado, o 'menu' para bajar la dificultad.",
 ]
 
+# Recon extra (disponible de Medio para arriba, y en Modo Libre).
+HELP_EXTRAS = [
+    "  --- recon extra ---",
+    "  telnet <ip> [puerto]     conectarse a un puerto y ver su banner",
+    "  traceroute <ip>          ver el recorrido de red hasta un host",
+    "  arp                      tabla de vecinos (IPs/MACs descubiertas)",
+    "  netstat                  conexiones/puertos activos",
+    "  inspect -v <ip>          deteccion de versiones de los servicios",
+]
 
-def help_for(difficulty: str) -> list[str]:
-    return {
+HELP_FREE = [
+    "  [ MODO LIBRE activo: tiempo infinito, todos los dispositivos hackeables ]",
+    "  Cada host (router/workstation/security/file-server) tiene su FLAG.",
+    "  Tras 'exploit <ip>' usa ls / cd / read en ESE host.",
+]
+
+
+def help_for(difficulty: str, free: bool = False) -> list[str]:
+    base = {
         "facil": HELP_FACIL,
         "medio": HELP_MEDIO,
         "dificil": HELP_DIFICIL,
     }.get(difficulty, HELP_PRO)
+    lines = list(base)
+    if difficulty != "facil" or free:
+        lines = lines + HELP_EXTRAS
+    if free:
+        lines = HELP_FREE + [""] + lines
+    return lines
 
 
 # ------------------------- PISTAS por dificultad -----------------------

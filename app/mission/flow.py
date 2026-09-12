@@ -16,7 +16,8 @@ import threading
 
 from app.leds import segments as seg
 from app.mission import script
-from app.mission.commands import CommandParser
+from app.mission.commands import (CommandParser, EXTRA_COMMANDS, available_commands,
+                                   versions_available)
 from app.ui import theme
 
 WAITING = "waiting"
@@ -45,12 +46,17 @@ class MissionController:
 
         self.parser = CommandParser(cfg.network.cidr)
         self.difficulty = cfg.modes.difficulty
+        self.free = cfg.modes.free_mode
+        self.available = available_commands(self.difficulty, self.free)
         self.state = WAITING
         self.hosts = []
         self.cwd = "/"
         self.target = cfg.host_by_role("fileserver")
         self.target_ip = self.target.ip if self.target else None
-        self.access = False
+        self.sessions = set()      # ips a las que ya entraste
+        self.session_ip = None     # host en el que tenes shell (para ls/read/cd)
+        self.access = False        # compat: True si tenes acceso a algun host
+        self.term.completer = self._completions
 
         self._q = queue.Queue()
         self._timer_job = None
@@ -77,6 +83,8 @@ class MissionController:
     def start_mission(self):
         self.state = BRIEFING
         self.access = False
+        self.sessions = set()
+        self.session_ip = None
         self.hosts = []
         self.cwd = "/"
         self._remaining = self.cfg.timing.mission_seconds
@@ -87,7 +95,8 @@ class MissionController:
         self.term.clear()
         self.term.write_lines(script.BANNER.splitlines(), tag="banner")
         self.term.writeln("")
-        self.term.type_lines(script.briefing(self.difficulty), tag="fg", on_done=self._after_briefing)
+        self.term.type_lines(script.briefing(self.difficulty, self.free), tag="fg",
+                             on_done=self._after_briefing)
 
     def _after_briefing(self):
         self._start_timer()
@@ -135,6 +144,12 @@ class MissionController:
                 self.term.writeln("    escribi 'help' para ver los comandos.", tag="dim")
             return
 
+        # gating por dificultad: los comandos extra no estan en nivel Facil
+        if pc.name in EXTRA_COMMANDS and pc.name not in self.available:
+            self.term.writeln("[!] '" + pc.name + "' no esta disponible en nivel Facil.", tag="amber")
+            self.term.writeln("    subi a Medio/Dificil/Pro o activa Modo Libre.", tag="dim")
+            return
+
         handlers = {
             "help": self._cmd_help,
             "hint": self._cmd_hint,
@@ -143,10 +158,14 @@ class MissionController:
             "whoami": self._cmd_whoami,
             "menu": self._to_menu,
             "scan": self._cmd_scan,
-            "inspect": lambda: self._cmd_inspect(pc.ip),
+            "inspect": lambda: self._cmd_inspect(pc.ip, pc.versions),
             "connect": lambda: self._cmd_connect(pc.ip, pc.port),
             "exploit": lambda: self._cmd_exploit(pc.ip, pc.method),
             "ping": lambda: self._cmd_ping(pc.ip),
+            "telnet": lambda: self._cmd_telnet(pc.ip, pc.port),
+            "traceroute": lambda: self._cmd_traceroute(pc.ip),
+            "arp": self._cmd_arp,
+            "netstat": self._cmd_netstat,
             "cd": lambda: self._cmd_cd(pc.path),
             "ls": lambda: self._cmd_ls(pc.path),
             "read": lambda: self._cmd_read(pc.path),
@@ -158,14 +177,50 @@ class MissionController:
 
     # ================= comandos informativos =================
     def _cmd_help(self):
-        self.term.write_lines(script.help_for(self.difficulty), tag="cyan")
+        self.term.write_lines(script.help_for(self.difficulty, self.free), tag="cyan")
 
     def _cmd_hint(self):
         self._show_hint()
 
+    # ================= autocompletado (TAB) =================
+    _IP_CMDS = ("inspect", "connect", "exploit", "ping", "telnet", "traceroute", "nmap")
+    _PATH_CMDS = ("cd", "ls", "read", "cat")
+
+    def _completions(self, text):
+        ends_space = text.endswith(" ")
+        tokens = text.split()
+        # 1) completar el nombre del comando (primer token)
+        if len(tokens) == 0 or (len(tokens) == 1 and not ends_space):
+            pref = tokens[0] if tokens else ""
+            return [c + " " for c in sorted(self.available) if c.startswith(pref)]
+        cmd = tokens[0]
+        last = "" if ends_space else tokens[-1]
+        head = text[:len(text) - len(last)]
+        # 2) exploit <ip> <metodo>
+        if cmd == "exploit" and (len(tokens) > 2 or (len(tokens) == 2 and ends_space)):
+            return [head + m for m in ("leak", "sqli", "hydra") if m.startswith(last)]
+        # 3) IPs de los hosts descubiertos
+        if cmd in self._IP_CMDS:
+            ips = [h.ip for h in self.hosts] or [h.ip for h in self.cfg.hosts]
+            return [head + ip for ip in ips if ip.startswith(last)]
+        # 4) rutas dentro del host donde tenes shell
+        if cmd in self._PATH_CMDS and self.session_ip:
+            dirpart, partial = (last.rsplit("/", 1) + [""])[:2] if "/" in last else ("", last)
+            dirpart = dirpart + "/" if "/" in last else ""
+            base_dir = self._resolve(dirpart) if dirpart else self.cwd
+            try:
+                names = self.backend.fs_names(self.session_ip, base_dir)
+            except Exception:
+                names = []
+            return [head + dirpart + n for n in names if n.startswith(partial)]
+        return []
+
     def _cmd_whoami(self):
-        if self.access:
-            self.term.writeln("  " + self.cfg.fileserver.ssh_user + "@FILE-SERVER", tag="green")
+        if self.session_ip:
+            host = self.cfg.host_by_ip(self.session_ip)
+            name = host.name if host else self.session_ip
+            user = self.cfg.fileserver.ssh_user if self.session_ip == self.cfg.fileserver.ip else "root"
+            self.term.writeln("  " + user + "@" + name, tag="green")
         else:
             self.term.writeln("  visitante@terminal", tag="fg")
 
@@ -201,10 +256,13 @@ class MissionController:
         self.root.after(420, lambda: self._reveal_hosts(i + 1))
 
     # ================= inspect =================
-    def _cmd_inspect(self, ip):
-        if self.state == BRIEFING or not self.hosts:
+    def _cmd_inspect(self, ip, versions=False):
+        if not self.free and (self.state == BRIEFING or not self.hosts):
             self.term.writeln("[!] Primero descubri la red (scan).", tag="amber")
             return
+        if versions and not versions_available(self.difficulty, self.free):
+            self.term.writeln("[!] La deteccion de versiones (-sV) no esta en nivel Facil.", tag="amber")
+            versions = False
         host = self.cfg.host_by_ip(ip)
         role = host.role if host else "fileserver"
         if self.netmap:
@@ -213,7 +271,7 @@ class MissionController:
         self.target_ip = ip
         self._busy(True)
         self.term.type_lines([script.RUN_INSPECT.format(ip=ip)], tag="dim",
-                             on_done=lambda: self._async(lambda: self.backend.inspect(ip),
+                             on_done=lambda: self._async(lambda: self.backend.inspect(ip, versions),
                                                          self._inspect_done))
 
     def _inspect_done(self, res):
@@ -246,7 +304,7 @@ class MissionController:
 
     # ================= exploit =================
     def _cmd_exploit(self, ip, method):
-        if not self.hosts:
+        if not self.free and not self.hosts:
             self.term.writeln("[!] Primero descubri la red (scan).", tag="amber")
             return
         if not ip:
@@ -271,11 +329,17 @@ class MissionController:
         self.term.writeln("")
         self.term.write_lines(res.output, tag="green" if res.success else "red")
         if res.success:
+            ip = self.target_ip
+            self.sessions.add(ip)
+            self.session_ip = ip
+            self.cwd = "/"
             self.access = True
             self.state = EXPLOITED
+            host = self.cfg.host_by_ip(ip)
+            role = host.role if host else "fileserver"
             if self.netmap:
-                self.netmap.focus_role("fileserver")
-            self.leds.animate_segments(seg.segments_for_role("fileserver"), seg.ANIM_FOCUS)
+                self.netmap.focus_role(role)
+            self.leds.animate_segments(seg.segments_for_role(role), seg.ANIM_FOCUS)
             n = script.nudge(self.difficulty, "exploited")
             if n:
                 self.term.writeln("")
@@ -296,6 +360,51 @@ class MissionController:
         self.term.write_lines(lines, tag="fg")
         self._busy(False)
 
+    # ================= recon extra (telnet/traceroute/arp/netstat) =========
+    def _cmd_telnet(self, ip, port):
+        host = self.cfg.host_by_ip(ip)
+        if host and self.netmap:
+            self.netmap.focus_role(host.role)
+        if host:
+            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_FOCUS)
+        self._busy(True)
+        self._async(lambda: self.backend.telnet(ip, port), self._recon_done)
+
+    def _cmd_traceroute(self, ip):
+        host = self.cfg.host_by_ip(ip)
+        role = host.role if host else None
+        self._busy(True)
+
+        def done(lines):
+            self.term.write_lines(lines, tag="fg")
+            self._busy(False)
+            # LED: encender la ruta salto por salto hacia el objetivo
+            if role:
+                self._light_path_progressive(seg.segments_for_role(role), 0)
+
+        self._async(lambda: self.backend.traceroute(ip), done)
+
+    def _light_path_progressive(self, segs, i):
+        if i >= len(segs):
+            return
+        self.leds.animate_segment(segs[i], seg.ANIM_DISCOVER)
+        self.root.after(350, lambda: self._light_path_progressive(segs, i + 1))
+
+    def _cmd_arp(self):
+        ips = [h.ip for h in self.hosts] or [h.ip for h in self.cfg.hosts]
+        self._busy(True)
+        self._async(lambda: self.backend.arp(ips), self._recon_done)
+
+    def _cmd_netstat(self):
+        ip = self.session_ip or (self.cfg.host_by_role("terminal").ip
+                                 if self.cfg.host_by_role("terminal") else "127.0.0.1")
+        self._busy(True)
+        self._async(lambda: self.backend.netstat(ip), self._recon_done)
+
+    def _recon_done(self, lines):
+        self.term.write_lines(lines, tag="fg")
+        self._busy(False)
+
     # ================= filesystem (cd / ls / read) =================
     def _resolve(self, path):
         if not path:
@@ -306,13 +415,18 @@ class MissionController:
             norm = "/" + norm
         return norm
 
+    def _no_access(self):
+        self.term.writeln("[!] Todavia no tenes acceso a ningun host. Corre 'exploit <ip>' primero.",
+                          tag="amber")
+
     def _cmd_cd(self, path):
-        if not self.access:
-            self.term.writeln("[!] Todavia no tenes acceso. Corre 'exploit' primero.", tag="amber")
+        if not self.session_ip:
+            self._no_access()
             return
         target = self._resolve(path)
         self._busy(True)
-        self._async(lambda: self.backend.is_dir(target), lambda ok: self._cd_done(ok, target))
+        self._async(lambda: self.backend.is_dir(self.session_ip, target),
+                    lambda ok: self._cd_done(ok, target))
 
     def _cd_done(self, ok, target):
         if ok:
@@ -323,12 +437,12 @@ class MissionController:
         self._busy(False)
 
     def _cmd_ls(self, path):
-        if not self.access:
-            self.term.writeln("[!] Todavia no tenes acceso. Corre 'exploit' primero.", tag="amber")
+        if not self.session_ip:
+            self._no_access()
             return
         target = self._resolve(path)
         self._busy(True)
-        self._async(lambda: self.backend.ls(target), self._ls_done)
+        self._async(lambda: self.backend.ls(self.session_ip, target), self._ls_done)
 
     def _ls_done(self, res):
         self.term.writeln("  " + res.path, tag="dim")
@@ -345,25 +459,36 @@ class MissionController:
         self._busy(False)
 
     def _cmd_read(self, path):
-        if not self.access:
-            self.term.writeln("[!] Todavia no tenes acceso. Corre 'exploit' primero.", tag="amber")
+        if not self.session_ip:
+            self._no_access()
             return
         if not path:
             self.term.writeln("[!] uso: read <ruta>", tag="amber")
             return
         target = self._resolve(path)
         self._busy(True)
-        self._async(lambda: self.backend.read(target), lambda r: self._read_done(r, target))
+        self._async(lambda: self.backend.read(self.session_ip, target),
+                    lambda r: self._read_done(r, target))
 
     def _read_done(self, res, target):
         self.term.writeln("")
         self.term.write_lines(res.content.splitlines(), tag="green")
         self._busy(False)
-        if target.rstrip("/").endswith("secret.txt"):
+        got_flag = "FLAG{" in (res.content or "")
+        host = self.cfg.host_by_ip(self.session_ip)
+        role = host.role if host else "fileserver"
+        if got_flag:
             if self.netmap:
-                self.netmap.transfer_role("fileserver")
-            self.leds.animate_segments(seg.segments_for_role("fileserver"), seg.ANIM_TRANSFER)
+                self.netmap.transfer_role(role)
+            self.leds.animate_segments(seg.segments_for_role(role), seg.ANIM_TRANSFER)
+        # En la MISION, leer el secreto del FILE-SERVER termina el juego.
+        if not self.free and target.rstrip("/").endswith("secret.txt") \
+                and self.session_ip == self.cfg.fileserver.ip:
             self.root.after(1200, self._complete)
+        elif self.free and got_flag:
+            self.term.writeln("")
+            self.term.writeln("[+] FLAG capturada. Segui explorando otros hosts o 'menu' para salir.",
+                              tag="white")
 
     # ================= fin =================
     def _complete(self):
@@ -397,6 +522,10 @@ class MissionController:
     # ================= timers / pistas =================
     def _start_timer(self):
         self._cancel_timers()
+        if self.free:
+            if self.on_timer:
+                self.on_timer(None)   # None -> el label muestra tiempo infinito
+            return
         self._tick_timer()
 
     def _tick_timer(self):

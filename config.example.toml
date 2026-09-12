@@ -8,6 +8,7 @@ visual    = true         # panel visual (mapa de red) on/off
 engine    = "simulated"  # "simulated" | "real"
 difficulty= "facil"      # "facil" | "medio" | "dificil" | "pro" (cuanto/como te guia)
 autostart = false        # true = saltea el menu de setup (modo kiosco)
+free_mode = false        # true = modo libre: tiempo infinito, sin orden, todo hackeable
 
 [timing]
 mission_seconds   = 300  # duracion de la mision (5 min)

@@ -58,17 +58,23 @@ class RealBackend(NetworkBackend):
         return ScanResult(hosts=hosts)
 
     # ----------------------------- inspect ----------------------------
-    def inspect(self, ip: str) -> InspectResult:
+    def inspect(self, ip: str, versions: bool = False) -> InspectResult:
         nmap = shutil.which("nmap")
         if not nmap:
             raise RuntimeError("nmap no esta instalado.")
         known = self.cfg.host_by_ip(ip)
         ports = known.ports if (known and known.ports) else [22, 80, 5000]
-        cmd = [nmap, "-p", ",".join(str(p) for p in ports), ip]
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=120).stdout
+        cmd = [nmap, "-p", ",".join(str(p) for p in ports)]
+        if versions:
+            cmd.append("-sV")
+        cmd.append(ip)
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=180).stdout
         results = []
-        for m in re.finditer(r"^(\d+)/tcp\s+(\w+)\s+(\S+)", out, re.M):
-            results.append(PortResult(int(m.group(1)), m.group(2), m.group(3)))
+        for m in re.finditer(r"^(\d+)/tcp\s+(\w+)\s+(\S+)(?:\s+(.*))?$", out, re.M):
+            svc = m.group(3)
+            if versions and m.group(4):
+                svc = svc + " " + m.group(4).strip()
+            results.append(PortResult(int(m.group(1)), m.group(2), svc))
         if not results:
             results = [PortResult(p, "open", _SERVICE_BY_PORT.get(p, "unknown")) for p in ports]
         return InspectResult(ip=ip, ports=results)
@@ -85,60 +91,64 @@ class RealBackend(NetworkBackend):
         return bruteforce.run(self.cfg, base_url)
 
     # ------------------------------ SSH -------------------------------
-    def _ssh_client(self):
+    def _ssh_client(self, ip):
         import paramiko
 
-        if self._ssh is not None:
-            return self._ssh
+        if not hasattr(self, "_ssh_by_ip"):
+            self._ssh_by_ip = {}
+        if ip in self._ssh_by_ip:
+            return self._ssh_by_ip[ip]
+        fs = self.cfg.fileserver
+        port = fs.ssh_port if ip == fs.ip else 22
         cli = paramiko.SSHClient()
         cli.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         cli.connect(
-            self.cfg.fileserver.ip,
-            port=self.cfg.fileserver.ssh_port,
-            username=self.cfg.fileserver.ssh_user,
-            password=self.cfg.creds.leak_pass,  # el usuario ctf del nodo usa esta clave
-            timeout=8,
-            allow_agent=False,
-            look_for_keys=False,
+            ip, port=port,
+            username=fs.ssh_user,
+            password=self.cfg.creds.leak_pass,
+            timeout=8, allow_agent=False, look_for_keys=False,
         )
-        self._ssh = cli
+        self._ssh_by_ip[ip] = cli
         return cli
 
-    def _real_path(self, vpath: str) -> str:
+    def _real_path(self, ip, vpath: str) -> str:
+        # El mapeo a base_path solo aplica al FILE-SERVER; otros hosts usan la ruta tal cual.
         vpath = "/" + vpath.strip().lstrip("/")
-        real = posixpath.normpath(posixpath.join(self.cfg.fileserver.base_path, vpath.lstrip("/")))
+        if ip != self.cfg.fileserver.ip:
+            return vpath
         base = self.cfg.fileserver.base_path
+        real = posixpath.normpath(posixpath.join(base, vpath.lstrip("/")))
         if not (real == base or real.startswith(base + "/")):
-            real = base  # evita salir de la raiz virtual
+            real = base
         return real
 
-    def _run(self, argv) -> str:
-        cli = self._ssh_client()
+    def _run(self, ip, argv) -> str:
+        cli = self._ssh_client(ip)
         _in, out, err = cli.exec_command(" ".join(argv), timeout=8)
         return out.read().decode("utf-8", "ignore")
 
-    def ls(self, path: str) -> LsResult:
-        real = self._real_path(path)
-        text = self._run(["ls", "-1p", "--", "'" + real + "'"])
+    def ls(self, ip: str, path: str) -> LsResult:
+        real = self._real_path(ip, path)
+        text = self._run(ip, ["ls", "-1p", "--", "'" + real + "'"])
         entries = []
         for line in text.splitlines():
             name = line.strip()
             if not name:
                 continue
-            is_dir = name.endswith("/")
-            entries.append(DirEntry(name.rstrip("/"), is_dir))
+            entries.append(DirEntry(name.rstrip("/"), name.endswith("/")))
         return LsResult(path="/" + path.strip().lstrip("/"), entries=entries)
 
-    def read(self, path: str) -> ReadResult:
-        real = self._real_path(path)
-        content = self._run(["cat", "--", "'" + real + "'"])
+    def read(self, ip: str, path: str) -> ReadResult:
+        real = self._real_path(ip, path)
+        content = self._run(ip, ["cat", "--", "'" + real + "'"])
         return ReadResult(path=path, content=content or "[archivo vacio o inexistente]")
 
-    def is_dir(self, path: str) -> bool:
-        real = self._real_path(path)
-        out = self._run(["test", "-d", "'" + real + "'", "&&", "echo", "DIR"])
+    def is_dir(self, ip: str, path: str) -> bool:
+        real = self._real_path(ip, path)
+        out = self._run(ip, ["test", "-d", "'" + real + "'", "&&", "echo", "DIR"])
         return "DIR" in out
 
+    # ------------------------- recon extra -------------------------
     def ping(self, ip: str) -> list[str]:
         import sys as _sys
         flag = "-n" if _sys.platform.startswith("win") else "-c"
@@ -149,11 +159,54 @@ class RealBackend(NetworkBackend):
             return [f"ping: error ({exc})"]
         return out.splitlines() or [f"ping {ip}: sin respuesta"]
 
+    def telnet(self, ip: str, port: int) -> list[str]:
+        import socket
+        out = [f"Trying {ip}:{port}..."]
+        try:
+            with socket.create_connection((ip, port), timeout=5) as s:
+                out.append(f"Connected to {ip}.")
+                s.settimeout(2.5)
+                try:
+                    banner = s.recv(256).decode("utf-8", "ignore").strip()
+                    if banner:
+                        out.append(banner)
+                except Exception:
+                    pass
+        except Exception as exc:
+            return [f"telnet: no se puede conectar a {ip}:{port} ({exc})"]
+        return out
+
+    def traceroute(self, ip: str) -> list[str]:
+        import sys as _sys
+        cmd = ["tracert", "-d", "-h", "10", ip] if _sys.platform.startswith("win") \
+            else ["traceroute", "-m", "10", ip]
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=60).stdout
+        except Exception as exc:
+            return [f"traceroute: error ({exc})"]
+        return out.splitlines() or [f"traceroute {ip}: sin salida"]
+
+    def arp(self, ips) -> list[str]:
+        try:
+            out = subprocess.run(["arp", "-a"], capture_output=True, text=True, timeout=15).stdout
+        except Exception as exc:
+            return [f"arp: error ({exc})"]
+        return out.splitlines() or ["arp: sin entradas"]
+
+    def netstat(self, ip: str) -> list[str]:
+        import sys as _sys
+        cmd = ["netstat", "-an"] if _sys.platform.startswith("win") else ["netstat", "-tuln"]
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=15).stdout
+        except Exception as exc:
+            return [f"netstat: error ({exc})"]
+        return out.splitlines()[:30] or ["netstat: sin salida"]
+
     def close(self):
         super().close()
-        if self._ssh is not None:
+        for cli in getattr(self, "_ssh_by_ip", {}).values():
             try:
-                self._ssh.close()
+                cli.close()
             except Exception:
                 pass
-            self._ssh = None
+        self._ssh_by_ip = {}

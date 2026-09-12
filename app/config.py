@@ -23,6 +23,7 @@ class Modes:
     engine: str = "simulated"
     difficulty: str = "facil"
     autostart: bool = False
+    free_mode: bool = False  # tiempo infinito, sin orden, todos los dispositivos hackeables
 
 
 @dataclass
@@ -114,6 +115,7 @@ def load_config(path: str | Path | None = None, argv: list[str] | None = None) -
         engine=str(m.get("engine", "simulated")),
         difficulty=str(m.get("difficulty", "facil")),
         autostart=bool(m.get("autostart", False)),
+        free_mode=bool(m.get("free_mode", False)),
     )
     t = raw.get("timing", {})
     timing = Timing(
@@ -174,6 +176,7 @@ def _apply_cli_overrides(cfg: Config, argv: list[str] | None) -> None:
     parser.add_argument("--visual", action="store_true")
     parser.add_argument("--autostart", action="store_true")
     parser.add_argument("--menu", action="store_true", help="forzar el menu de setup")
+    parser.add_argument("--free", action="store_true", help="modo libre (tiempo infinito)")
     args, _ = parser.parse_known_args(argv)
 
     if args.engine:
@@ -188,6 +191,8 @@ def _apply_cli_overrides(cfg: Config, argv: list[str] | None) -> None:
         cfg.modes.autostart = True
     if args.menu:
         cfg.modes.autostart = False
+    if args.free:
+        cfg.modes.free_mode = True
 
 
 def _validate(cfg: Config) -> None:

@@ -10,13 +10,35 @@ import tkinter as tk
 from app.ui import theme
 
 
+def _common_prefix(strings) -> str:
+    if not strings:
+        return ""
+    s1, s2 = min(strings), max(strings)
+    for i, ch in enumerate(s1):
+        if ch != s2[i]:
+            return s1[:i]
+    return s1
+
+
+def _last_tokens(lines) -> list[str]:
+    """Ultimo 'token' de cada linea candidata, para listar opciones al usuario."""
+    out = []
+    for ln in lines:
+        out.append(ln.rstrip().split(" ")[-1] or ln)
+    return out
+
+
 class TerminalPanel(tk.Frame):
-    def __init__(self, parent, mono_font, cps: int = 160, on_submit=None):
+    def __init__(self, parent, mono_font, cps: int = 160, on_submit=None, completer=None):
         super().__init__(parent, bg=theme.BG, highlightthickness=0)
         self.cps = cps
         self.on_submit = on_submit
+        self.completer = completer          # fn(text) -> lista de lineas completas candidatas
         self._typing = False
         self._pending_after = None
+        self._history = []                  # comandos enviados (historial)
+        self._hist_idx = None               # posicion al navegar con flechas
+        self._draft = ""                    # lo tipeado antes de entrar al historial
 
         self.text = tk.Text(
             self,
@@ -45,6 +67,10 @@ class TerminalPanel(tk.Frame):
                               font=(mono_font, 13), bd=0, highlightthickness=0)
         self.entry.pack(side="left", fill="x", expand=True, ipady=6)
         self.entry.bind("<Return>", self._submit)
+        self.entry.bind("<Up>", self._history_prev)
+        self.entry.bind("<Down>", self._history_next)
+        self.entry.bind("<Tab>", self._autocomplete)
+        self.entry.bind("<Control-l>", lambda e: (self.clear(), "break")[1])
 
         # Tags de color
         self.text.tag_config("fg", foreground=theme.FG)
@@ -128,8 +154,57 @@ class TerminalPanel(tk.Frame):
             return "break"
         line = self.entry.get()
         self.entry.delete(0, "end")
+        if line.strip() and (not self._history or self._history[-1] != line):
+            self._history.append(line)
+        self._hist_idx = None
+        self._draft = ""
         if self.on_submit:
             self.on_submit(line)
+        return "break"
+
+    # -------------------- historial (flechas arriba/abajo) --------------------
+    def _history_prev(self, _evt=None):
+        if not self._history:
+            return "break"
+        if self._hist_idx is None:
+            self._draft = self.entry.get()
+            self._hist_idx = len(self._history)
+        self._hist_idx = max(0, self._hist_idx - 1)
+        self._set_entry(self._history[self._hist_idx])
+        return "break"
+
+    def _history_next(self, _evt=None):
+        if self._hist_idx is None:
+            return "break"
+        self._hist_idx += 1
+        if self._hist_idx >= len(self._history):
+            self._hist_idx = None
+            self._set_entry(self._draft)
+        else:
+            self._set_entry(self._history[self._hist_idx])
+        return "break"
+
+    def _set_entry(self, text):
+        self.entry.delete(0, "end")
+        self.entry.insert(0, text)
+        self.entry.icursor("end")
+
+    # -------------------- autocompletado (TAB) --------------------
+    def _autocomplete(self, _evt=None):
+        if self.completer is None or self._typing:
+            return "break"
+        text = self.entry.get()
+        cands = self.completer(text)
+        if not cands:
+            return "break"
+        if len(cands) == 1:
+            self._set_entry(cands[0])
+        else:
+            common = _common_prefix(cands)
+            if common and len(common) > len(text):
+                self._set_entry(common)
+            # mostrar las opciones en el transcripto
+            self.writeln("  " + "   ".join(_last_tokens(cands)), tag="dim")
         return "break"
 
     def _blink_prompt(self):
