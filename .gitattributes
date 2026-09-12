@@ -1,0 +1,12 @@
+# Normalizacion de fin de linea.
+* text=auto
+
+# Scripts y archivos que corren en el contenedor Linux DEBEN quedar en LF,
+# aunque se editen/clonen en Windows (si no, el shebang se rompe: bad interpreter ^M).
+*.sh            text eol=lf
+entrypoint.sh   text eol=lf
+Dockerfile      text eol=lf
+*.ino           text eol=lf
+
+# Binarios
+*.png binary

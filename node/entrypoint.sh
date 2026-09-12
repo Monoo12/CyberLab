@@ -21,6 +21,7 @@ chown -R ctf:ctf "$LAB_BASE"
 
 # 3) sshd
 mkdir -p /run/sshd
+ssh-keygen -A 2>/dev/null || true   # genera host keys si faltan (si no, sshd no arranca)
 /usr/sbin/sshd
 
 # 4) Base de datos vulnerable + servidor web (proceso principal)

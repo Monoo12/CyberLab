@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+import shlex
 import shutil
 import subprocess
 
@@ -41,7 +42,7 @@ class RealBackend(NetworkBackend):
                 raise RuntimeError("nmap no esta instalado (o usa scan_tool='arp-scan').")
             cmd = [nmap, "-sn", self.cfg.network.cidr]
 
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=120).stdout
+        out = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=120).stdout
         ips = re.findall(r"(\d{1,3}(?:\.\d{1,3}){3})", out)
         seen, hosts = set(), []
         for ip in ips:
@@ -68,7 +69,7 @@ class RealBackend(NetworkBackend):
         if versions:
             cmd.append("-sV")
         cmd.append(ip)
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=180).stdout
+        out = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=180).stdout
         results = []
         for m in re.finditer(r"^(\d+)/tcp\s+(\w+)\s+(\S+)(?:\s+(.*))?$", out, re.M):
             svc = m.group(3)
@@ -129,7 +130,7 @@ class RealBackend(NetworkBackend):
 
     def ls(self, ip: str, path: str) -> LsResult:
         real = self._real_path(ip, path)
-        text = self._run(ip, ["ls", "-1p", "--", "'" + real + "'"])
+        text = self._run(ip, ["ls", "-1p", "--", shlex.quote(real)])
         entries = []
         for line in text.splitlines():
             name = line.strip()
@@ -140,12 +141,12 @@ class RealBackend(NetworkBackend):
 
     def read(self, ip: str, path: str) -> ReadResult:
         real = self._real_path(ip, path)
-        content = self._run(ip, ["cat", "--", "'" + real + "'"])
+        content = self._run(ip, ["cat", "--", shlex.quote(real)])
         return ReadResult(path=path, content=content or "[archivo vacio o inexistente]")
 
     def is_dir(self, ip: str, path: str) -> bool:
         real = self._real_path(ip, path)
-        out = self._run(ip, ["test", "-d", "'" + real + "'", "&&", "echo", "DIR"])
+        out = self._run(ip, ["test", "-d", shlex.quote(real), "&&", "echo", "DIR"])
         return "DIR" in out
 
     # ------------------------- recon extra -------------------------
@@ -154,7 +155,7 @@ class RealBackend(NetworkBackend):
         flag = "-n" if _sys.platform.startswith("win") else "-c"
         try:
             out = subprocess.run(["ping", flag, "3", ip], capture_output=True,
-                                 text=True, timeout=20).stdout
+                                 text=True, errors="replace", timeout=20).stdout
         except Exception as exc:
             return [f"ping: error ({exc})"]
         return out.splitlines() or [f"ping {ip}: sin respuesta"]
@@ -181,14 +182,14 @@ class RealBackend(NetworkBackend):
         cmd = ["tracert", "-d", "-h", "10", ip] if _sys.platform.startswith("win") \
             else ["traceroute", "-m", "10", ip]
         try:
-            out = subprocess.run(cmd, capture_output=True, text=True, timeout=60).stdout
+            out = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=60).stdout
         except Exception as exc:
             return [f"traceroute: error ({exc})"]
         return out.splitlines() or [f"traceroute {ip}: sin salida"]
 
     def arp(self, ips) -> list[str]:
         try:
-            out = subprocess.run(["arp", "-a"], capture_output=True, text=True, timeout=15).stdout
+            out = subprocess.run(["arp", "-a"], capture_output=True, text=True, errors="replace", timeout=15).stdout
         except Exception as exc:
             return [f"arp: error ({exc})"]
         return out.splitlines() or ["arp: sin entradas"]
@@ -197,7 +198,7 @@ class RealBackend(NetworkBackend):
         import sys as _sys
         cmd = ["netstat", "-an"] if _sys.platform.startswith("win") else ["netstat", "-tuln"]
         try:
-            out = subprocess.run(cmd, capture_output=True, text=True, timeout=15).stdout
+            out = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=15).stdout
         except Exception as exc:
             return [f"netstat: error ({exc})"]
         return out.splitlines()[:30] or ["netstat: sin salida"]
