@@ -9,13 +9,16 @@ de `app/leds/segments.py` y de la orquestación en `app/mission/flow.py`.
 La topología es un árbol con **5 ramas de datos** (una tira por pin del micro). El id de segmento es
 lo que viaja por serial (`SEG:<id>:<anim>`).
 
-| Segmento (id) | Tramo físico | Pin firmware (default) | LEDs sugeridos |
+| Segmento (id) | Tramo físico | Pin firmware (default) | LEDs (est. 60/m, tablero 1 m) |
 |:---:|---|:---:|:---:|
-| **0** | router ↔ switch-izq ↔ **TERMINAL** | `PIN_B0` | 20 (largo) |
-| **1** | router ↔ switch-der (troncal) | `PIN_B1` | 18 (largo) |
-| **2** | switch-der ↔ **FILE-SERVER** | `PIN_B2` | 8 |
-| **3** | switch-der ↔ **WORKSTATION-01** | `PIN_B3` | 6 |
-| **4** | switch-der ↔ **SECURITY-SERVER** | `PIN_B4` | 6 |
+| **0** | router ↔ switch-izq ↔ **TERMINAL** | `PIN_B0` | ~50 (largo) |
+| **1** | router ↔ switch-der (troncal) | `PIN_B1` | ~28 |
+| **2** | switch-der ↔ **FILE-SERVER** | `PIN_B2` | ~30 |
+| **3** | switch-der ↔ **WORKSTATION-01** | `PIN_B3` | ~24 |
+| **4** | switch-der ↔ **SECURITY-SERVER** | `PIN_B4` | ~32 |
+
+> Estimación para tablero 1×1 m con tira 60 LED/m (`BRANCH_COUNTS = {50,28,30,24,32}`, `MAX_LEDS 52`
+> en el firmware). Medí los tramos reales y afiná; `MAX_LEDS` debe ser ≥ el mayor.
 
 ## 2. Ruta de LEDs por dispositivo (desde la terminal)
 

@@ -35,9 +35,11 @@
 #define PIN_B4 6
 
 // --- Cantidad de LEDs por rama (AJUSTAR al largo real de cada tramo) --------
-// Tramos router<->switch suelen ser mas largos; ramas cortas al switch derecho.
-const int BRANCH_COUNTS[NUM_BRANCHES] = { 20, 18, 8, 6, 6 };
-#define MAX_LEDS 24  // >= al mayor de BRANCH_COUNTS
+// Estimacion para tablero de 1x1 m con tira de 60 LED/m (mide los tramos con la
+// tira puesta y afina estos numeros). Ordenes: rama0 router<->switch-izq<->terminal
+// (la mas larga), rama1 router<->switch-der, ramas 2/3/4 switch-der<->dispositivos.
+const int BRANCH_COUNTS[NUM_BRANCHES] = { 50, 28, 30, 24, 32 };  // ~164 LEDs
+#define MAX_LEDS 52  // >= al mayor de BRANCH_COUNTS
 
 // --- Estados de animacion ---------------------------------------------------
 enum Anim { A_OFF = 0, A_IDLE, A_DISCOVER, A_FOCUS, A_EXPLOIT, A_TRANSFER };
