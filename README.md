@@ -39,6 +39,8 @@ Flags útiles: `--autostart` (salta el menú, modo kiosco), `--difficulty medio`
 3. `nmap` instalado en la PC de la muestra (para `scan`/`inspect`).
 4. `python -m app.main --engine real`.
 
+Detalle completo (credenciales que deben coincidir, pre-flight, troubleshooting): [docs/DESPLIEGUE-REAL.md](docs/DESPLIEGUE-REAL.md).
+
 ## Empaquetado portable (cualquier PC, Windows o Linux)
 
 ```bash
@@ -53,6 +55,8 @@ un bundle en Windows y otro en Linux.
 
 - [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md) — operar la estación en la muestra.
 - [docs/GUIA-HARDWARE.md](docs/GUIA-HARDWARE.md) — conectar la tira LED, el micro y los nodos.
+- [docs/DESPLIEGUE-REAL.md](docs/DESPLIEGUE-REAL.md) — pasar a modo real (nodo, credenciales, checklist).
+- [docs/LEDS.md](docs/LEDS.md) — qué comando enciende qué segmento de LED (para el firmware).
 - [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) — módulos, protocolo serial, Docker vs PyInstaller.
 
 > El nodo es **inseguro por diseño** (vulnerable a propósito). Usarlo solo en la red aislada del

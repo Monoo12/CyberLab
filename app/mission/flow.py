@@ -101,7 +101,27 @@ class MissionController:
     def _after_briefing(self):
         self._start_timer()
         self._arm_hint()
+        if self.cfg.modes.engine == "real":
+            self._run_preflight()
         self.term.focus_input()
+
+    # ================= pre-flight (solo modo real) =================
+    def _run_preflight(self):
+        from app.backend import preflight
+        self.term.writeln("[ PREFLIGHT ] verificando el laboratorio (red, nodo, credenciales)...",
+                          tag="dim")
+        self._async(lambda: preflight.run_checks(self.cfg), self._preflight_done)
+
+    def _preflight_done(self, results):
+        for status, text in results:
+            if status == "ok":
+                self.term.writeln("  [OK] " + text, tag="green")
+            else:
+                self.term.writeln("  [!]  " + text, tag="amber")
+        if any(s == "warn" for s, _ in results):
+            self.term.writeln("  (si algo falla en vivo, reinicia en modo Simulado como fallback)",
+                              tag="dim")
+        self.term.writeln("")
 
     def on_any_key(self):
         if self.state == WAITING:

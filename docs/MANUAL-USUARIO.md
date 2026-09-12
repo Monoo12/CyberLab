@@ -72,6 +72,10 @@ El objetivo es el login del FILE-SERVER. Hay **tres** maneras de vencerlo; con c
 
 ## 6. Si algo falla en vivo (fallback)
 
+> En **modo Real**, al iniciar la misión la terminal corre un **PREFLIGHT** que chequea
+> nodo/red/credenciales y avisa con `[OK]`/`[!]`. Si ves un `[!]`, mirá
+> [docs/DESPLIEGUE-REAL.md](DESPLIEGUE-REAL.md) o reiniciá en Simulado.
+
 - **La red o el nodo no responden** (errores rojos en la terminal): reiniciá la app y en el menú
   elegí **Motor: Simulado**. La experiencia sigue igual, guionada, sin que el público note la
   diferencia. (O arrancá con `--engine simulated`.)

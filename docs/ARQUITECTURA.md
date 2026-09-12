@@ -13,6 +13,7 @@ app/
     base.py          NetworkBackend (ABC) + connect() (navegador real) comun
     simulated.py     SimulatedBackend  (respuestas guionadas + sleeps)
     real.py          RealBackend       (nmap, paramiko SSH, exploits)
+    preflight.py     chequeo pre-vuelo del modo real (red/nodo/credenciales)
     browser.py       apertura del navegador real en modo app (multiplataforma)
     models.py        dataclasses (Host, PortResult, ExploitResult, ...)
   exploits/          html_leak.py / sqli.py / bruteforce.py   (3 metodos, usados por RealBackend)
@@ -63,8 +64,12 @@ muestra en rojo y sugiere pasar a Simulado.
 ### Seguridad del input
 `commands.py` valida cada línea contra una **lista blanca de regex** (comandos guiados + sintaxis real), extrae
 argumentos tipados y verifica que la IP esté en el CIDR del lab. Ningún texto del visitante llega a
-una shell: los `subprocess` usan listas de argumentos (sin `shell=True`) y SSH/HTTP van
-parametrizados.
+una shell: los `subprocess` usan listas de argumentos (sin `shell=True`), las rutas que van al shell
+remoto por SSH se escapan con `shlex.quote`, y SSH/HTTP van parametrizados.
+
+**Pre-flight (modo real):** al iniciar una misión real, `backend/preflight.py` chequea en un hilo que
+`nmap` esté, que la web del nodo responda y que las **credenciales SSH coincidan** con el nodo, y lo
+reporta en la terminal (`[OK]`/`[!]`). Es advisory: nunca bloquea.
 
 ## Protocolo serial de LEDs (app ↔ firmware)
 
