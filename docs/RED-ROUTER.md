@@ -1,17 +1,28 @@
 # Configuración de la red — router y switches
 
 Guía para dejar la red del laboratorio lista para Cyber Lab, con el hardware:
-**router TP-Link AX3000 (Archer AX55/AX53, WiFi 6)** + **2× switch TL-SG1008D**.
+**router TP-Link AX3000 WiFi 6** (familia **Archer** por panel web, o **Deco** mesh por app) +
+**2× switch TL-SG1008D**.
 
 **Objetivo:** router en `192.168.10.1`, con IPs fijas para cada equipo (las del `config.toml`),
 WiFi apagado y la red **aislada de internet** (el nodo es vulnerable a propósito).
 
-> Si tu AX3000 es un **Deco X50** (sistema mesh), no tiene panel web: se configura desde la **app
-> Deco** y los pasos difieren. Esta guía es para un **Archer** (router clásico con interfaz web).
-> La interfaz web es igual en todos los Archer AX; si un menú cambia, mirá la etiqueta del router
-> para el modelo exacto.
+## Identificá tu modelo primero
 
-## Switches TL-SG1008D → no se configuran
+"AX3000" es la **velocidad WiFi**, no un modelo: TP-Link vende varios con ese número y se dividen en
+dos familias con interfaces distintas. **Mirá la etiqueta en la base del router** (dice `Model: ...`)
+o la caja:
+
+| Si dice… | Familia | Se configura con | Guía |
+|---|---|---|---|
+| **Archer AX3000 / AX53 / AX55 / AX55 Pro** | Router clásico | **Panel web** (`tplinkwifi.net`) | Sección **A** (abajo) |
+| **Deco X50 / X55** | Mesh | **App Deco** (celular) | Sección **B** (al final) |
+
+La familia **Archer** es lo más probable si lo compraste como "router" suelto; **Deco** se vende como
+kit mesh ("sistema", 1–3 nodos). Los pasos de Archer son iguales en todos los modelos AX; el AX55 Pro
+solo agrega un puerto de 2,5 Gbps (no cambia nada de esta guía).
+
+## Switches TL-SG1008D → no se configuran (vale para ambas familias)
 
 Son **no administrables** (unmanaged): no tienen IP, ni web, ni menú. Plug-and-play.
 
@@ -20,7 +31,9 @@ ambos al router — eso arma un loop, y como estos switches **no tienen Spanning
 una tormenta de broadcast que tumba toda la red. La topología del tablero es un árbol, así que estás
 bien mientras no cierres un anillo.
 
-## Router AX3000 — paso a paso
+---
+
+# A) Router Archer (AX3000 / AX53 / AX55 / AX55 Pro) — panel web
 
 ### Paso 0 — Conectarte al router
 1. Cable de red de tu **PC a un puerto LAN** del router (los **amarillos**), **no** al puerto
@@ -74,7 +87,44 @@ cable). Más prolijo y seguro.
 **No conectes nada al puerto WAN (azul).** El nodo es vulnerable a propósito, así que conviene **sin
 salida a internet**. Todo (`nmap`/`SSH`/`HTTP`) funciona igual porque es tráfico de LAN.
 
-## Cableado (árbol, mapea al tablero y a los LEDs)
+---
+
+# B) Deco mesh (X50 / X55) — app Deco
+
+Si tu equipo es un **Deco**, no hay panel web: todo se hace desde la **app Deco** (iOS/Android), con
+el celular conectado al WiFi del Deco. Logramos lo mismo que en la sección A.
+
+### Paso 0 — Deco en modo Router
+En la app: **More (Más) > Advanced (Avanzado) > Operation Mode** → **Router** (no *Access Point*).
+> Importante: en modo *Access Point* las opciones de LAN IP / DHCP / reservas **no aparecen** en la
+> app (las maneja el otro router). Para este laboratorio el Deco tiene que estar en **Router**.
+
+### Paso 1 — LAN IP a `192.168.10.1`
+App Deco: **More > Advanced > LAN IP** → IP `192.168.10.1`, máscara `255.255.255.0` → **Save**.
+(El Deco se reinicia y los equipos reciben IPs `192.168.10.x`.)
+
+### Paso 2 — Reservas de IP (Address Reservation)
+App Deco: **More > Advanced > Address Reservation** → **+** (arriba a la derecha) →
+**Select from Client** (elegís un equipo conectado) o **Custom** (MAC + IP a mano). Asigná:
+
+| Equipo | IP |
+|---|---|
+| PC visitante (terminal) | `192.168.10.10` |
+| Nodo **FILE-SERVER** | `192.168.10.20` |
+| Decoys *(opcional)* | `192.168.10.30` / `192.168.10.40` |
+
+Guardá cada una. Después reiniciá los equipos (o `ipconfig /renew`) para que tomen la IP.
+
+### Paso 3 — WiFi e internet
+- WiFi: podés dejar la red del Deco o bajar la potencia; para el lab va todo por cable.
+- Internet: dejá el **WAN del Deco sin conectar** (LAN aislada; el nodo es vulnerable a propósito).
+- Puertos: en Deco los puertos Ethernet son LAN una vez en modo Router; cableá los switches a esos.
+
+> El resto (cableado y verificación, abajo) es **igual** para Archer y Deco.
+
+---
+
+## Cableado (árbol, mapea al tablero y a los LEDs) — vale para ambas familias
 
 ```
 Router LAN1 ───── Switch IZQUIERDO ──── PC visitante (.10)     -> rama LED 0
@@ -107,5 +157,10 @@ estas direcciones.
 - Anotá la **contraseña de admin del router** y guardala con el resto de credenciales del evento.
 
 ## Fuentes (TP-Link)
+Archer (panel web):
 - [Cambiar la IP LAN del router](https://www.tp-link.com/us/support/faq/67/)
 - [Configurar Address Reservation (IP fija por MAC)](https://www.tp-link.com/us/support/faq/182/)
+
+Deco (app):
+- [Deco: cambiar la LAN IP](https://www.tp-link.com/us/support/faq/2331/)
+- [Deco: DHCP / Address Reservation](https://www.tp-link.com/us/support/faq/1795/)
