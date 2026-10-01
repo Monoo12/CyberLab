@@ -13,6 +13,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
+RUN chmod +x /app/entrypoint.sh /app/reset.sh /app/fileserver.sh 2>/dev/null || true
 
 ENV LAB_USER=admin \
     LAB_PASS=S3cr3t-2024! \
