@@ -7,8 +7,9 @@ services:
     image: cyberlab-fileserver
     container_name: cyberlab-fileserver
     ports:
-      - "80:80"     # web vulnerable
-      - "22:22"     # SSH (ls/read). En dev co-locado usar "2222:22" y ssh_port=2222.
+      - "80:80"       # web vulnerable
+      - "2222:22"     # SSH del nodo en el host:2222 (evita chocar con el sshd propio del equipo).
+                      # La app lo usa con [fileserver].ssh_port = 2222 en config.toml.
     environment:
       LAB_USER: admin
       LAB_PASS: S3cr3t-2024!

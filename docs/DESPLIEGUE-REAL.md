@@ -58,6 +58,10 @@ ssh ctf@192.168.10.20                 # sanity: SSH entra con la clave del confi
 python -m app.main --engine real --difficulty medio
 ```
 
+> El SSH del nodo se publica en **host:2222** (`2222:22` en el compose) para no chocar con el
+> sshd propio del equipo; por eso `config.toml` trae `[fileserver].ssh_port = 2222`. La web
+> sigue en el 80, asi que `connect <ip>:80` no cambia.
+
 Reset entre visitantes: `node/reset.sh` (recrea el contenedor y deja el estado limpio).
 
 ## 4. Pre-flight automático (chequeo al iniciar)

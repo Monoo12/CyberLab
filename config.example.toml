@@ -23,7 +23,7 @@ scan_tool = "nmap"       # "nmap" | "arp-scan"
 [fileserver]
 ip          = "192.168.10.20"
 http_port   = 80
-ssh_port    = 22
+ssh_port    = 2222
 ssh_user    = "ctf"
 url         = "http://192.168.10.20:80"
 secret_path = "/restricted/secret.txt"
