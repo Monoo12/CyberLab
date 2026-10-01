@@ -21,6 +21,8 @@ laboratorio y el nodo FILE-SERVER. Pensada para el armado antes del evento.
 **En el equipo del nodo (FILE-SERVER):**
 - **Docker** + Docker Compose.
 
+**Red del laboratorio:** router + switches con IPs fijas que coincidan con `config.toml`. Paso a paso para el router TP-Link AX3000 y los switches: **[docs/RED-ROUTER.md](RED-ROUTER.md)**.
+
 ## 2. ⚠️ Las credenciales deben coincidir (lo que más rompe en vivo)
 
 El modo real usa credenciales en **dos lados** que tienen que estar sincronizados. Si no, `ls`/`read`

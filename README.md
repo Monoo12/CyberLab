@@ -56,6 +56,7 @@ un bundle en Windows y otro en Linux.
 - [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md) — operar la estación en la muestra.
 - [docs/GUIA-HARDWARE.md](docs/GUIA-HARDWARE.md) — conectar la tira LED, el micro y los nodos.
 - [docs/DESPLIEGUE-REAL.md](docs/DESPLIEGUE-REAL.md) — pasar a modo real (nodo, credenciales, checklist).
+- [docs/RED-ROUTER.md](docs/RED-ROUTER.md) — configurar el router TP-Link AX3000 y los switches.
 - [docs/LEDS.md](docs/LEDS.md) — qué comando enciende qué segmento de LED (para el firmware).
 - [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) — módulos, protocolo serial, Docker vs PyInstaller.
 
