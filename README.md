@@ -44,7 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/Monoo12/CyberLab/main/scripts/setup
 curl -fsSL https://raw.githubusercontent.com/Monoo12/CyberLab/main/scripts/setup-fileserver.sh | bash
 ```
 
-Luego: terminal → `./run-terminal.sh`; file-server → `node/fileserver.sh on|off|reset|status`.
+Luego: terminal → `./run-terminal.sh` (en el **menú** elegís Simulado/Real, dificultad, Modo libre); file-server → `node/fileserver.sh on|off|reset|status`. Los flags (`--autostart`, `--engine`…) son opcionales, sobre todo para kiosco.
 
 ## Modo Real (en la red del laboratorio)
 

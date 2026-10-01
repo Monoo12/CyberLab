@@ -91,10 +91,12 @@ fi
 # Lanzador comodo.
 cat > run-terminal.sh <<'LAUNCH'
 #!/usr/bin/env bash
-# Arranca la app del visitante. Flags opcionales se pasan al final:
-#   ./run-terminal.sh                  (simulado, con menu)
-#   ./run-terminal.sh --engine real    (modo real: red + nodo)
-#   ./run-terminal.sh --autostart      (kiosco, sin menu)
+# Arranca la app del visitante. Normalmente alcanza con:  ./run-terminal.sh
+# En el MENU de arranque elegis Motor (Simulado/Real), Dificultad, Modo libre, Panel visual.
+# Los flags son OPCIONALES, sobre todo para kiosco (que saltea el menu):
+#   ./run-terminal.sh                 -> abre el menu y elegis todo ahi
+#   ./run-terminal.sh --autostart     -> kiosco: sin menu, usa lo de config.toml
+#   ./run-terminal.sh --autostart --engine real --difficulty medio   -> kiosco preconfigurado
 cd "$(dirname "${BASH_SOURCE[0]}")"
 exec .venv/bin/python -m app.main "$@"
 LAUNCH
@@ -102,9 +104,8 @@ chmod +x run-terminal.sh
 
 log "LISTO. La terminal quedo instalada en: $REPO_ROOT"
 echo "   cd $REPO_ROOT"
-echo "   Arrancar (simulado):   ./run-terminal.sh"
-echo "   Arrancar (real):       ./run-terminal.sh --engine real"
-echo "   Kiosco (sin menu):     ./run-terminal.sh --autostart"
+echo "   Arrancar:          ./run-terminal.sh      (en el MENU elegis Simulado/Real, dificultad, etc.)"
+echo "   Kiosco (sin menu): ./run-terminal.sh --autostart"
 echo
 echo "   Si vas a usar los LEDs: reinicia la sesion para el permiso de 'dialout'."
 echo "   Para modo real, revisa docs/RED-ROUTER.md y docs/DESPLIEGUE-REAL.md."
