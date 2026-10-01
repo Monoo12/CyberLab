@@ -32,6 +32,20 @@ misión. `F11` alterna pantalla completa; `Esc` sale de pantalla completa.
 
 Flags útiles: `--autostart` (salta el menú, modo kiosco), `--difficulty medio`, `--free` (modo libre), `--no-visual`.
 
+## Instalacion en Linux (scripts)
+
+En un equipo nuevo (Debian/Ubuntu/Raspberry Pi OS), con internet la primera vez:
+
+```bash
+# PC del visitante (terminal): clona el repo, instala la app y deja un lanzador
+curl -fsSL https://raw.githubusercontent.com/Monoo12/CyberLab/main/scripts/setup-terminal.sh | bash
+
+# Equipo FILE-SERVER: instala Docker, construye y enciende el nodo + accesos ON/OFF
+curl -fsSL https://raw.githubusercontent.com/Monoo12/CyberLab/main/scripts/setup-fileserver.sh | bash
+```
+
+Luego: terminal → `./run-terminal.sh`; file-server → `node/fileserver.sh on|off|reset|status`.
+
 ## Modo Real (en la red del laboratorio)
 
 1. Levantar el nodo en el equipo FILE-SERVER: `cd node && docker compose up -d --build`.

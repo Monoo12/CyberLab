@@ -40,6 +40,12 @@ lados. **El pre-flight (sección 4) te avisa si no matchean.**
 
 ## 3. Levantar el nodo y la app
 
+> **Atajo (Linux):** en vez de instalar a mano, en cada equipo nuevo corre el script que clona el
+> repo e instala todo:
+> - Terminal (PC visitante): `scripts/setup-terminal.sh` -> luego `./run-terminal.sh`
+> - FILE-SERVER: `scripts/setup-fileserver.sh` -> deja el nodo ON y el control `node/fileserver.sh on|off|reset`
+
+
 ```bash
 # En el equipo del nodo:
 cd node
