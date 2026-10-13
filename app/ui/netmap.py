@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from app.leds import segments as seg
 from app.ui import theme
 
 # posiciones relativas (x, y) en [0,1]
@@ -39,10 +40,8 @@ _SEG_LINKS = {
     3: [("switch-right", "workstation")],
     4: [("switch-right", "security")],
 }
-_ROLE_SEGS = {
-    "router": [0], "terminal": [0],
-    "fileserver": [0, 1, 2], "workstation": [0, 1, 3], "security": [0, 1, 4],
-}
+# role -> segmentos de su ruta: fuente unica en app/leds/segments.py (no duplicar
+# el mapeo aca; antes vivia en un _ROLE_SEGS local que podia desincronizarse).
 
 
 class NetworkMapPanel(tk.Frame):
@@ -136,21 +135,21 @@ class NetworkMapPanel(tk.Frame):
     def discover_node(self, role):
         """Barrido al descubrir: enciende el nodo y su camino, tenue."""
         self._set_node(role, fill="#1f5a26", outline=theme.GREEN)
-        for sid in _ROLE_SEGS.get(role, []):
+        for sid in seg.segments_for_role(role):
             for link in _SEG_LINKS[sid]:
                 self._set_link(link, "#2a7a30", 3)
 
     def focus_role(self, role, color=None):
         color = color or theme.GREEN
         self.reset()
-        for sid in _ROLE_SEGS.get(role, []):
+        for sid in seg.segments_for_role(role):
             for link in _SEG_LINKS[sid]:
                 self._set_link(link, color, 4)
         self._set_node(role, fill="#1f5a26", outline=color)
         self._set_node("terminal", outline=theme.GREEN)
 
     def pulse_role(self, role, times=8, color=theme.AMBER, interval=140):
-        links = [l for sid in _ROLE_SEGS.get(role, []) for l in _SEG_LINKS[sid]]
+        links = [l for sid in seg.segments_for_role(role) for l in _SEG_LINKS[sid]]
 
         def step(i):
             on = i % 2 == 0
