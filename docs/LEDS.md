@@ -9,16 +9,17 @@ de `app/leds/segments.py` y de la orquestación en `app/mission/flow.py`.
 La topología es un árbol con **5 ramas de datos** (una tira por pin del micro). El id de segmento es
 lo que viaja por serial (`SEG:<id>:<anim>`).
 
-| Segmento (id) | Tramo físico | Pin firmware (default) | LEDs (est. 60/m, tablero 1 m) |
+| Segmento (id) | Tramo físico | Pin firmware (default) | LEDs (placeholder) |
 |:---:|---|:---:|:---:|
-| **0** | router ↔ switch-izq ↔ **TERMINAL** | `PIN_B0` | ~50 (largo) |
-| **1** | router ↔ switch-der (troncal) | `PIN_B1` | ~28 |
-| **2** | switch-der ↔ **FILE-SERVER** | `PIN_B2` | ~30 |
-| **3** | switch-der ↔ **WORKSTATION-01** | `PIN_B3` | ~24 |
-| **4** | switch-der ↔ **SECURITY-SERVER** | `PIN_B4` | ~32 |
+| **0** | router ↔ switch-izq ↔ **TERMINAL** | `PIN_B0` | 60 (suele ser el más largo) |
+| **1** | router ↔ switch-der (troncal) | `PIN_B1` | 60 |
+| **2** | switch-der ↔ **FILE-SERVER** | `PIN_B2` | 60 |
+| **3** | switch-der ↔ **WORKSTATION-01** | `PIN_B3` | 60 |
+| **4** | switch-der ↔ **SECURITY-SERVER** | `PIN_B4` | 60 |
 
-> Estimación para tablero 1×1 m con tira 60 LED/m (`BRANCH_COUNTS = {50,28,30,24,32}`, `MAX_LEDS 52`
-> en el firmware). Medí los tramos reales y afiná; `MAX_LEDS` debe ser ≥ el mayor.
+> Tira WS2812B 5V de **5 m (~300 LEDs)** cortada en estos 5 tramos (un pin por rama). Los valores son
+> un **placeholder** (división pareja 60 c/u): poné en `BRANCH_COUNTS` el largo real de cada tramo (la
+> suma ~300). `MAX_LEDS` lo deriva el firmware solo, no lo toques. Ver `docs/GUIA-HARDWARE.md §3`.
 
 ## 2. Ruta de LEDs por dispositivo (desde la terminal)
 
@@ -102,4 +103,8 @@ ALL:TRANSFER                 (Mission Complete)
 - Si agregás un dispositivo/rama nuevo: sumá su entrada en `app/leds/segments.py`
   (`PATH_TO_ROLE`) y una rama/pin en el firmware (`BRANCH_COUNTS`, `addLeds`) — y actualizá las
   secciones 1 y 2 de este documento.
+- **`MAX_LEDS` se deriva solo** del mayor de `BRANCH_COUNTS` (constexpr): no hay que ajustarlo a mano
+  ni corres riesgo de desbordar los buffers si cambiás los largos.
+- El consumo lo limita FastLED a 9 A para la fuente de 5V/10A (`setMaxPowerInVoltsAndMilliamps`): no
+  toques eso salvo que cambies la fuente.
 - Para probar sin la app: `python tools/led_test.py --port COM3 SEG:2:EXPLOIT` (ver `docs/GUIA-HARDWARE.md`).

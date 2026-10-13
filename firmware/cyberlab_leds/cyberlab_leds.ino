@@ -35,11 +35,21 @@
 #define PIN_B4 6
 
 // --- Cantidad de LEDs por rama (AJUSTAR al largo real de cada tramo) --------
-// Estimacion para tablero de 1x1 m con tira de 60 LED/m (mide los tramos con la
-// tira puesta y afina estos numeros). Ordenes: rama0 router<->switch-izq<->terminal
-// (la mas larga), rama1 router<->switch-der, ramas 2/3/4 switch-der<->dispositivos.
-const int BRANCH_COUNTS[NUM_BRANCHES] = { 50, 28, 30, 24, 32 };  // ~164 LEDs
-#define MAX_LEDS 52  // >= al mayor de BRANCH_COUNTS
+// La tira es WS2812B 5V 60 LED/m, 5 m (~300 LEDs) cortada en los 5 tramos del
+// tablero: un pin de datos por rama. Estos numeros son un PLACEHOLDER (division
+// pareja 5 m / 5 = ~60 c/u): reemplaza cada uno por el largo REAL del tramo
+// cortado. El tramo 0 (router<->switch-izq<->terminal) suele ser el mas largo.
+// La suma de los 5 deberia dar ~300.
+constexpr int BRANCH_COUNTS[NUM_BRANCHES] = { 60, 60, 60, 60, 60 };
+
+// MAX_LEDS se deriva SOLO del mayor de BRANCH_COUNTS (dimensiona el buffer de
+// cada rama). Asi los buffers nunca se desbordan aunque cambies los largos de
+// arriba y te olvides de tocar otra cosa.
+constexpr int _cmax2(int a, int b) { return a > b ? a : b; }
+constexpr int MAX_LEDS = _cmax2(BRANCH_COUNTS[0],
+                         _cmax2(BRANCH_COUNTS[1],
+                         _cmax2(BRANCH_COUNTS[2],
+                         _cmax2(BRANCH_COUNTS[3], BRANCH_COUNTS[4]))));
 
 // --- Estados de animacion ---------------------------------------------------
 enum Anim { A_OFF = 0, A_IDLE, A_DISCOVER, A_FOCUS, A_EXPLOIT, A_TRANSFER };
@@ -70,6 +80,11 @@ void setup() {
   FastLED.addLeds<WS2812B, PIN_B2, GRB>(leds2, BRANCH_COUNTS[2]);
   FastLED.addLeds<WS2812B, PIN_B3, GRB>(leds3, BRANCH_COUNTS[3]);
   FastLED.addLeds<WS2812B, PIN_B4, GRB>(leds4, BRANCH_COUNTS[4]);
+  // Limite de consumo: la fuente es 5V/10A (50W). Los ~300 LEDs a blanco pleno
+  // superarian los 10A, asi que FastLED autoescala el brillo en cada show() para
+  // no pasarse (margen al 90% = 9000 mA). Evita brownout/reset del micro. Es
+  // independiente de setBrightness(): ese es el techo, esto es el limite de corriente.
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000);
   FastLED.setBrightness(140);
   for (int b = 0; b < NUM_BRANCHES; b++) setAnim(b, A_IDLE);
   FastLED.clear(true);
@@ -79,6 +94,7 @@ void setup() {
 void renderBranch(int b) {
   CRGB* px = BRANCH_LEDS[b];
   int n = BRANCH_COUNTS[b];
+  if (n <= 0) return;  // rama sin LEDs: nada que renderizar (evita % 0 y division por 0)
   uint32_t el = millis() - branchT0[b];
 
   switch (branchAnim[b]) {

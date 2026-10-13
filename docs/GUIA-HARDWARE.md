@@ -32,30 +32,47 @@ La tira es **direccionable** (cada LED se prende solo) — imprescindible para e
 - Si una cadena es larga, **inyectá 5V también al final** (no solo al principio) para que los últimos
   LEDs no se vean tenues o cambien de color por caída de tensión.
 
-### Cuánta tira y qué fuente (tablero de 1×1 m, tira 60 LED/m)
-- Los 5 tramos suman **~2,5–3 m** de tira → un **rollo de 5 m** te da margen de sobra (usás ~2,7 m,
-  el resto queda para pruebas). Se corta cada 1 LED (~1,7 cm).
-- A 60 LED/m eso son **~150–170 LEDs**. Un WS2812B a blanco pleno consume ~60 mA; el pico teórico
-  sería alto, pero con brillo al ~55% y colores (no blanco) el consumo real es ~2–4 A. Usá una
-  **fuente 5V de ≥ 5 A** (6 A ideal). *No* hace falta una de 20 A (eso es para 300 LEDs en blanco).
+### Fuente de alimentación (5V / 10A, fija)
+La tira es de **5 m (~300 LEDs)**. Un WS2812B a blanco pleno consume ~60 mA → 300 LEDs darían ~18 A
+en teoría, **más de lo que entrega la fuente**. Por eso el laboratorio usa una **fuente switching
+5V / 10A (50 W)** y el **firmware limita el consumo** a 9 A
+(`FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000)`): FastLED autoescala el brillo en cada frame para
+no superar ese tope, así no hay riesgo de brownout ni de reset del micro. **No** hace falta una fuente
+de 18–20 A.
+
+- **Inyectá 5V en varios puntos** de los 5 m (al menos al principio y al final de cada tramo largo):
+  la tira pierde tensión de punta a punta y los últimos LEDs se ven tenues o cambian de color.
 - No alimentes la tira desde el pin 5V del micro por USB: usá la fuente, con **GND común** con el micro.
+
+### Nivel lógico de datos 3.3V → 5V (clave con ESP8266)
+El **ESP8266 (NodeMCU) saca la señal de datos a 3.3V**, pero el WS2812B espera un "1" lógico de
+~0.7×5V = **3.5V**. 3.3V queda justo por debajo del umbral → el primer LED puede leer mal y arruinar
+toda la cadena (parpadeos, colores random, ramas muertas). Soluciones, de mejor a peor:
+
+- **Level shifter 3.3→5V** en cada línea de datos (ej. **74AHCT125** o 74HCT245). Es lo recomendado.
+- Alimentar la tira a **~4.3–4.5V** (un diodo en serie desde los 5V) para bajar su umbral — sirve en
+  tramos cortos.
+- Primer LED "sacrificable" muy cerca del micro: a veces engancha igual, pero es lo menos fiable.
+- Arduino UNO/Nano (5V) no tienen este problema; con **ESP8266 poné el level shifter**.
 
 ## 3. Mapeo rama ↔ pin ↔ LEDs (espejo del software)
 
 El firmware y `app/leds/segments.py` comparten el mismo mapeo. Hay **5 ramas** (una tira por rama):
 
-| Rama (id) | Tramo físico | Pin por defecto | LEDs (est. 60/m, tablero 1 m) |
+| Rama (id) | Tramo físico | Pin por defecto | LEDs (placeholder) |
 |---|---|---|---|
-| 0 | router → switch-izq → **TERMINAL** | `PIN_B0` (D2/GPIO) | ~50 (tramo largo) |
-| 1 | router → switch-der | `PIN_B1` | ~28 |
-| 2 | switch-der → **FILE-SERVER** | `PIN_B2` | ~30 |
-| 3 | switch-der → WORKSTATION-01 | `PIN_B3` | ~24 |
-| 4 | switch-der → SECURITY-SERVER | `PIN_B4` | ~32 |
+| 0 | router → switch-izq → **TERMINAL** | `PIN_B0` | 60 (suele ser el más largo) |
+| 1 | router → switch-der | `PIN_B1` | 60 |
+| 2 | switch-der → **FILE-SERVER** | `PIN_B2` | 60 |
+| 3 | switch-der → WORKSTATION-01 | `PIN_B3` | 60 |
+| 4 | switch-der → SECURITY-SERVER | `PIN_B4` | 60 |
 
-- Son **estimaciones** del layout escalado a 1 m con 60 LED/m (total ~164). Medí cada tramo con la
-  tira puesta y afiná. El firmware ya trae estos valores (`BRANCH_COUNTS = {50,28,30,24,32}`, `MAX_LEDS 52`).
-- Ajustá **dos cosas** en el sketch: `PIN_B0..PIN_B4` (a los pines que uses) y `BRANCH_COUNTS`
-  (al largo real de cada tramo). `MAX_LEDS` debe ser **≥ el mayor** de `BRANCH_COUNTS`.
+- La tira de **5 m se corta en estos 5 tramos** (~300 LEDs en total). Los valores de arriba son un
+  **placeholder** (división pareja, 60 c/u): medí cada tramo cortado y poné el largo real en
+  `BRANCH_COUNTS`. La suma debería dar ~300.
+- Ajustá en el sketch **solo** `PIN_B0..PIN_B4` (los pines que uses) y `BRANCH_COUNTS` (los largos
+  reales de cada tramo). **`MAX_LEDS` ya no se toca a mano**: el firmware lo deriva del mayor de
+  `BRANCH_COUNTS`, así los buffers nunca se desbordan.
 - Pines sugeridos por placa: Arduino UNO/Nano → 2,3,4,5,6. ESP8266 (NodeMCU) → D1,D2,D5,D6,D7
   (GPIO5,4,14,12,13). ESP32 → casi cualquier GPIO de salida.
 
@@ -103,6 +120,7 @@ Deberías ver: barrido al `DISCOVER`, tramo fijo al `FOCUS`, pulso ámbar al `EX
 | Síntoma | Causa probable / arreglo |
 |---|---|
 | LEDs titilan o no prenden | **Falta tierra común** entre fuente y micro. Unir GND. |
+| LEDs titilan / colores random (ESP8266) | Señal de datos a 3.3V bajo el umbral del WS2812B; poné un **level shifter 3.3→5V** (ver §2). |
 | Solo prende el principio de una tira | Cadena larga sin re-inyección de 5V; inyectar 5V al final. |
 | Colores equivocados | Orden de color; probar `RGB` en vez de `GRB` en `addLeds<...>`. |
 | Una rama entera muerta | Flecha de DATA al revés, o pin equivocado en el sketch. |
