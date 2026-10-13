@@ -8,5 +8,9 @@ entrypoint.sh   text eol=lf
 Dockerfile      text eol=lf
 *.ino           text eol=lf
 
+# Scripts de Windows: CRLF (cmd.exe es sensible a los fin de linea en labels/goto).
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+
 # Binarios
 *.png binary

@@ -46,6 +46,20 @@ curl -fsSL https://raw.githubusercontent.com/Monoo12/CyberLab/main/scripts/setup
 
 Luego: terminal → `./run-terminal.sh` (en el **menú** elegís Simulado/Real, dificultad, Modo libre); file-server → `node/fileserver.sh on|off|reset|status`. Los flags (`--autostart`, `--engine`…) son opcionales, sobre todo para kiosco.
 
+## Instalacion en Windows (scripts .bat)
+
+Requisitos previos: **Python 3.11+** (python.org, con Tkinter) en la terminal; **Docker Desktop** (modo Linux containers) en el file-server.
+
+```bat
+rem PC del visitante (terminal): crea el venv e instala la app
+scripts\setup-terminal.bat
+
+rem Equipo FILE-SERVER: construye, levanta y VERIFICA el nodo
+scripts\setup-fileserver.bat
+```
+
+Luego: terminal → `run-terminal.bat` (doble clic); file-server → `node\fileserver.bat on|off|reset|status|logs`. Para modo real: instalá **nmap con Npcap** y corré la app como administrador (el `scan` lo necesita).
+
 ## Modo Real (en la red del laboratorio)
 
 1. Levantar el nodo en el equipo FILE-SERVER: `cd node && docker compose up -d --build`.
