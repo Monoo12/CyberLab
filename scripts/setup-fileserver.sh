@@ -59,17 +59,68 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 $SUDO systemctl enable --now docker 2>/dev/null || true
 
+COMPOSE="$REPO_ROOT/node/docker-compose.yml"
+
+# --- Chequeo previo de puertos (el nodo publica 80 web y 2222 SSH) ----------
+# Si el host ya ocupa esos puertos, el contenedor no bindea y el modo real falla.
+# El SSH va al 2222 a proposito, para NO chocar con el sshd propio del equipo (22).
+check_port() {  # puerto, para_que
+  if command -v ss >/dev/null 2>&1 && $SUDO ss -ltn 2>/dev/null | grep -q ":$1 "; then
+    warn "El puerto $1 ($2) ya esta ocupado en este equipo -> el nodo no podra usarlo."
+    echo "   Liberalo, o cambia el mapeo en node/docker-compose.yml (y config.toml si toca el SSH)."
+  fi
+}
+check_port 80   "web del FILE-SERVER"
+check_port 2222 "SSH del nodo"
+if command -v ufw >/dev/null 2>&1 && $SUDO ufw status 2>/dev/null | grep -qi "Status: active"; then
+  warn "ufw esta activo: habilita 80 y 2222 para que la PC de la muestra alcance el nodo:"
+  echo "   sudo ufw allow 80/tcp && sudo ufw allow 2222/tcp"
+fi
+
 # --- Construir y levantar el nodo ------------------------------------------
 log "Construyendo y levantando el FILE-SERVER..."
-if ! $SUDO docker compose -f "$REPO_ROOT/node/docker-compose.yml" up -d --build; then
-  warn "Fallo al levantar. Causa comun: el puerto 22 (SSH) ya lo usa el sshd del propio equipo."
-  echo "   Opciones:"
-  echo "   - Deshabilitar el SSH del host:   sudo systemctl disable --now ssh"
-  echo "   - O cambiar el mapeo 22:22 en node/docker-compose.yml y [fileserver].ssh_port en config.toml."
+if ! $SUDO docker compose -f "$COMPOSE" up -d --build; then
+  warn "Fallo al construir/levantar el contenedor. Causas comunes:"
+  echo "   - Puerto 80 (web) o 2222 (SSH) ocupado en el host (ver avisos de arriba)."
+  echo "   - Sin internet en la 1ra vez (hay que bajar la imagen base y los paquetes pip)."
+  echo "   - docker sin permisos: reinicia sesion tras el 'usermod -aG docker', o corre con sudo."
   exit 1
 fi
 
 chmod +x "$REPO_ROOT/node/fileserver.sh" "$REPO_ROOT/node/reset.sh" 2>/dev/null || true
+
+# --- Sanity post-arranque: que el nodo REALMENTE responda -------------------
+# Que falle aca (en el armado) y no en vivo frente a los visitantes.
+log "Verificando que el nodo responda (contenedor + web + SSH + usuario ctf)..."
+sleep 4   # darle un momento a Flask/sshd/seed_db
+NODE_OK=1
+if [ "$($SUDO docker inspect -f '{{.State.Running}}' cyberlab-fileserver 2>/dev/null)" = "true" ]; then
+  echo "   [OK] contenedor cyberlab-fileserver corriendo"
+else
+  warn "   [!] el contenedor NO quedo corriendo -> mira:  node/fileserver.sh logs"; NODE_OK=0
+fi
+if command -v curl >/dev/null 2>&1; then
+  if curl -fsS -o /dev/null --max-time 5 http://localhost:80/; then
+    echo "   [OK] web responde en http://localhost:80"
+  else
+    warn "   [!] la web NO responde en :80 -> revisa logs y que el 80 este libre"; NODE_OK=0
+  fi
+fi
+if $SUDO docker exec cyberlab-fileserver id ctf >/dev/null 2>&1; then
+  echo "   [OK] usuario ctf existe en el contenedor (lo usan ls/read por SSH)"
+else
+  warn "   [!] falta el usuario ctf -> ls/read por SSH fallaran"; NODE_OK=0
+fi
+if command -v ss >/dev/null 2>&1 && $SUDO ss -ltn 2>/dev/null | grep -q ":2222 "; then
+  echo "   [OK] SSH del nodo publicado en host:2222"
+else
+  warn "   [!] no veo el 2222 escuchando -> revisa el mapeo 2222:22 del compose"; NODE_OK=0
+fi
+if [ "$NODE_OK" = 1 ]; then
+  log "Nodo verificado OK (web + SSH + ctf). Recorda: en config.toml de la terminal, ssh_port = 2222."
+else
+  warn "Nodo con avisos: resolvelos ANTES del evento (node/fileserver.sh logs)."
+fi
 
 # --- Accesos de escritorio ON/OFF (best-effort) ----------------------------
 DESKTOP=""

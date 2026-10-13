@@ -93,4 +93,7 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "80")))
+    # threaded=True: el visitante abre el navegador (GET /) y a la vez corre un
+    # exploit (GET / o POST /login); sin hilos esas requests se serializan y el
+    # modo real se siente colgado. Un solo visitante por vez, asi que alcanza.
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "80")), threaded=True)

@@ -15,3 +15,11 @@ services:
       LAB_PASS: S3cr3t-2024!
       LAB_BASE: /srv/lab
     restart: unless-stopped
+    # Salud del nodo: 'docker ps' / 'fileserver.sh status' marcan (un)healthy si la
+    # web se cae. Usa python (curl no esta en la imagen python:slim).
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:80/', timeout=3)\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

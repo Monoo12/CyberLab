@@ -54,7 +54,7 @@ docker exec cyberlab-fileserver id ctf   # sanity: el usuario ctf existe
 
 # En la PC de la muestra (ajustá config.toml a las IPs reales primero):
 nmap -sn 192.168.10.0/24              # sanity: nmap descubre el nodo
-ssh ctf@192.168.10.20                 # sanity: SSH entra con la clave del config
+ssh -p 2222 ctf@192.168.10.20         # sanity: SSH al nodo (puerto 2222, NO el 22 del host)
 python -m app.main --engine real --difficulty medio
 ```
 
