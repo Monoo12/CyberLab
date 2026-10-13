@@ -9,6 +9,9 @@ Los comandos (`scan`, `inspect`, `connect`, `exploit`, `ls`, `read`) son **reale
 el nodo; existe además un **modo Simulado** completo para desarrollar y ensayar sin hardware (y como
 fallback en vivo).
 
+> **¿Armás el lab desde cero?** Guía visual paso a paso (LEDs, servidores, red y config):
+> **https://monoo12.github.io/CyberLab/docs/ARMADO.html**
+
 ## Componentes
 
 | Carpeta | Qué es |
@@ -81,7 +84,7 @@ un bundle en Windows y otro en Linux.
 
 ## Documentación
 
-- [docs/ARMADO.html](docs/ARMADO.html) — **guía visual de armado desde 0** (LEDs + servidores + red + config). Es una página HTML: descargala y abrila en el navegador (GitHub muestra el código, no la renderiza).
+- **[Guía visual de armado desde 0](https://monoo12.github.io/CyberLab/docs/ARMADO.html)** — LEDs + servidores + red + config, paso a paso, renderizada en GitHub Pages. Fuente: [docs/ARMADO.html](docs/ARMADO.html).
 - [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md) — operar la estación en la muestra.
 - [docs/GUIA-HARDWARE.md](docs/GUIA-HARDWARE.md) — conectar la tira LED, el micro y los nodos.
 - [docs/DESPLIEGUE-REAL.md](docs/DESPLIEGUE-REAL.md) — pasar a modo real (nodo, credenciales, checklist).
