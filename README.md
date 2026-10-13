@@ -81,6 +81,7 @@ un bundle en Windows y otro en Linux.
 
 ## Documentación
 
+- [docs/ARMADO.html](docs/ARMADO.html) — **guía visual de armado desde 0** (LEDs + servidores + red + config). Es una página HTML: descargala y abrila en el navegador (GitHub muestra el código, no la renderiza).
 - [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md) — operar la estación en la muestra.
 - [docs/GUIA-HARDWARE.md](docs/GUIA-HARDWARE.md) — conectar la tira LED, el micro y los nodos.
 - [docs/DESPLIEGUE-REAL.md](docs/DESPLIEGUE-REAL.md) — pasar a modo real (nodo, credenciales, checklist).

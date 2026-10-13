@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Armado del Cyber Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  /* Reset (lo que el host de Artifacts agrega al publicar; aca explicito para abrir el .html directo). */
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0}
+  img{max-width:100%;height:auto}
+  [hidden]{display:none!important}
+
+  /* Layout: columna de lectura centrada; header + chips de navegacion stickies; estetica terminal. */
+  :root{
+    --bg:#eef1ec; --surface:#ffffff; --surface-2:#e4e9e2; --fg:#14201a; --muted:#56655a;
+    --border:#cfd8cd; --accent:#0e7a2b; --accent-2:#0a5c20; --amber:#8a5a00; --cyan:#0b6b78; --danger:#b3261e;
+    --code-bg:#0b0f0b; --code-fg:#c8facc; --code-muted:#6f9a73; --code-accent:#39ff14;
+    --mono:"JetBrains Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --maxw:74ch; --radius:10px;
+  }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+    --bg:#0a0e0a; --surface:#0f150f; --surface-2:#141d14; --fg:#d7f5da; --muted:#86a389;
+    --border:#20301f; --accent:#39ff14; --accent-2:#5cff3a; --amber:#ffb000; --cyan:#35e0e0; --danger:#ff6b6b;
+    color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0a0e0a; --surface:#0f150f; --surface-2:#141d14; --fg:#d7f5da; --muted:#86a389;
+    --border:#20301f; --accent:#39ff14; --accent-2:#5cff3a; --amber:#ffb000; --cyan:#35e0e0; --danger:#ff6b6b;
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.6;
+       font-size:clamp(15px,1.5vw,16.5px);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:var(--maxw);margin-inline:auto;padding-inline:16px;padding-block:0}
+
+  /* --- header --- */
+  header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);
+    border-bottom:1px solid var(--border)}
+  .top-in{max-width:var(--maxw);margin-inline:auto;padding:10px 16px;display:flex;align-items:center;
+    justify-content:space-between;gap:12px}
+  .brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+  .brand .dot{color:var(--accent)}
+  .brand b{font-family:var(--mono);font-weight:700;letter-spacing:.5px;white-space:nowrap}
+  .brand span{font-family:var(--mono);font-size:.72rem;color:var(--muted);white-space:nowrap}
+  .tgl{font-family:var(--mono);font-size:.74rem;color:var(--fg);background:var(--surface);
+    border:1px solid var(--border);border-radius:999px;padding:6px 12px;cursor:pointer}
+  .tgl:hover{border-color:var(--accent)}
+
+  nav.nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 49px);z-index:20;background:var(--bg);
+    border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .nav-in{max-width:var(--maxw);margin-inline:auto;display:flex;gap:6px;padding:8px 16px;width:max-content;min-width:100%}
+  .nav a{font-family:var(--mono);font-size:.74rem;text-decoration:none;color:var(--muted);
+    border:1px solid transparent;border-radius:999px;padding:5px 11px;white-space:nowrap}
+  .nav a:hover{color:var(--fg)}
+  .nav a.active{color:var(--accent);border-color:var(--accent)}
+
+  main{padding-block:8px 64px}
+  section{padding-block:30px;border-top:1px solid var(--border)}
+  section:first-of-type{border-top:0}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
+  h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.8rem,6vw,2.5rem);line-height:1.1;
+     margin:.3em 0 .2em;text-wrap:balance;letter-spacing:-.5px}
+  h1 .cur{color:var(--accent);animation:blink 1.1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  h2{font-family:var(--mono);font-weight:700;font-size:clamp(1.3rem,3.4vw,1.6rem);line-height:1.2;
+     margin:0 0 .15em;text-wrap:balance;display:flex;align-items:baseline;gap:.5ch;flex-wrap:wrap}
+  h2 .n{color:var(--accent);font-size:.8em}
+  h3{font-family:var(--mono);font-weight:600;font-size:1.02rem;margin:1.6em 0 .3em;letter-spacing:.2px}
+  p{margin:.6em 0}
+  .lead{font-size:1.06rem;color:var(--fg)}
+  .sub{color:var(--muted)}
+  a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+  strong{color:var(--fg);font-weight:600}
+  code:not(pre code){font-family:var(--mono);font-size:.86em;background:var(--surface-2);
+    border:1px solid var(--border);border-radius:5px;padding:.08em .4em;word-break:break-word}
+
+  ul,ol{margin:.5em 0;padding-left:1.3em}
+  li{margin:.3em 0}
+  li::marker{color:var(--accent)}
+
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:1.1em 0}
+  .pill{font-family:var(--mono);font-size:.74rem;color:var(--muted);background:var(--surface);
+    border:1px solid var(--border);border-radius:999px;padding:5px 11px}
+  .pill b{color:var(--fg)}
+
+  /* --- steps --- */
+  ol.steps{list-style:none;padding:0;margin:1.2em 0;counter-reset:s}
+  ol.steps>li{counter-increment:s;position:relative;padding:14px 14px 14px 52px;margin:10px 0;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+  ol.steps>li::before{content:counter(s);position:absolute;left:12px;top:12px;width:28px;height:28px;
+    display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:.9rem;
+    color:var(--accent);background:var(--surface-2);border:1px solid var(--border);border-radius:8px}
+  ol.steps>li>:first-child{margin-top:0}
+  ol.steps>li>:last-child{margin-bottom:0}
+  .step-t{font-family:var(--mono);font-weight:600}
+
+  /* --- cards / checklist --- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px;margin:1em 0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+  .card h4{font-family:var(--mono);font-size:.82rem;letter-spacing:1px;text-transform:uppercase;
+    color:var(--accent);margin:0 0 .4em}
+  .card p{margin:.3em 0;font-size:.95rem}
+  .card .big{font-family:var(--mono);font-weight:700;font-size:1.05rem;color:var(--fg)}
+  ul.check{list-style:none;padding:0;margin:.6em 0}
+  ul.check li{padding-left:1.7em;position:relative;margin:.35em 0}
+  ul.check li::before{content:"\25A1";position:absolute;left:0;color:var(--accent);font-family:var(--mono)}
+
+  /* --- callouts --- */
+  .box{border:1px solid var(--border);border-left-width:3px;border-radius:8px;padding:12px 14px;margin:1.1em 0;
+    background:var(--surface)}
+  .box .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;
+    display:block;margin-bottom:.2em}
+  .box p{margin:.3em 0}
+  .box.tip{border-left-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+  .box.tip .lbl{color:var(--accent)}
+  .box.note{border-left-color:var(--cyan);background:color-mix(in srgb,var(--cyan) 10%,var(--surface))}
+  .box.note .lbl{color:var(--cyan)}
+  .box.warn{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,var(--surface))}
+  .box.warn .lbl{color:var(--amber)}
+  .box.danger{border-left-color:var(--danger);background:color-mix(in srgb,var(--danger) 11%,var(--surface))}
+  .box.danger .lbl{color:var(--danger)}
+
+  /* --- code --- */
+  .code{position:relative;margin:1em 0;background:var(--code-bg);border:1px solid #1c2a1c;border-radius:10px;overflow:hidden}
+  .code .bar{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;
+    border-bottom:1px solid #1c2a1c;background:#0d130d}
+  .code .bar .t{font-family:var(--mono);font-size:.7rem;letter-spacing:1px;text-transform:uppercase;color:var(--code-muted)}
+  .code .copy{font-family:var(--mono);font-size:.7rem;color:var(--code-fg);background:transparent;
+    border:1px solid #2a4a2a;border-radius:6px;padding:3px 9px;cursor:pointer}
+  .code .copy:hover{border-color:var(--code-accent);color:var(--code-accent)}
+  .code pre{margin:0;padding:12px 14px;overflow-x:auto;color:var(--code-fg);
+    font-family:var(--mono);font-size:.84rem;line-height:1.6}
+  .code pre .c{color:var(--code-muted)}
+  .code pre .k{color:var(--code-accent)}
+
+  /* --- tables --- */
+  .tw{overflow-x:auto;margin:1em 0;border:1px solid var(--border);border-radius:10px}
+  table{border-collapse:collapse;width:100%;min-width:460px;font-size:.9rem}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-family:var(--mono);font-size:.72rem;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
+    background:var(--surface-2)}
+  tr:last-child td{border-bottom:0}
+  td code{white-space:nowrap}
+
+  figure{margin:1.4em 0}
+  figure svg{display:block;width:100%;height:auto;max-width:100%;background:var(--surface);
+    border:1px solid var(--border);border-radius:10px;padding:10px}
+  figcaption{font-size:.84rem;color:var(--muted);margin-top:.5em;text-align:center}
+  /* SVG: var() no funciona en atributos de presentacion, va por CSS */
+  figure svg{color:var(--fg)}
+  figure svg text{font-family:var(--mono)}
+  .sf-box{fill:var(--surface-2)}
+  .sf-ac{fill:var(--accent)}
+  .sf-mut{fill:var(--muted)}
+  .sf-amb{fill:var(--amber)}
+  .ss-ac{stroke:var(--accent)}
+
+  .foot{color:var(--muted);font-size:.85rem;text-align:center;padding-top:10px}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <span class="brand"><b><span class="dot">&gt;</span> CYBER LAB</b><span>guia de armado</span></span>
+    <button class="tgl" id="themeToggle" aria-label="Cambiar tema">tema</button>
+  </div>
+</header>
+
+<nav class="nav" aria-label="Secciones">
+  <div class="nav-in">
+    <a href="#intro">Intro</a>
+    <a href="#materiales">Materiales</a>
+    <a href="#leds">A · LEDs</a>
+    <a href="#red">B · Red</a>
+    <a href="#servidores">C · Servidores</a>
+    <a href="#config">D · Config</a>
+    <a href="#probar">E · Probar</a>
+    <a href="#problemas">Problemas</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section id="intro">
+    <div class="eyebrow">De cero · paso a paso</div>
+    <h1>Armado del Cyber Lab<span class="cur">_</span></h1>
+    <p class="lead">Todo lo necesario para montar el laboratorio desde cero: armar la tira de <strong>LEDs</strong>,
+      levantar los <strong>servidores</strong>, cablear la <strong>red</strong> y dejar la <strong>configuración</strong>
+      lista para que el visitante cumpla la misión.</p>
+    <div class="meta">
+      <span class="pill">tiempo <b>~2–3 h</b> la 1ra vez</span>
+      <span class="pill">2 PC · 1 router · LEDs</span>
+      <span class="pill">corre en <b>Linux</b> y <b>Windows</b></span>
+    </div>
+
+    <h3>Qué vas a armar</h3>
+    <p>El tablero representa una red chica. En el recorrido, la <strong>TERMINAL</strong> (la PC del visitante)
+      ejecuta comandos reales contra el <strong>FILE-SERVER</strong>, y la tira de LEDs anima el camino de los
+      datos sobre el cableado. Físicamente montás <strong>dos máquinas</strong> y el tablero de luces:</p>
+    <div class="grid">
+      <div class="card"><h4>TERMINAL</h4><p class="big">PC del visitante</p><p class="sub">Corre la app (terminal + mapa + LEDs). El micro de los LEDs se enchufa acá por USB.</p></div>
+      <div class="card"><h4>FILE-SERVER</h4><p class="big">El nodo vulnerable</p><p class="sub">Contenedor Docker (web + SSH). Es el único servidor "real" del modo Real.</p></div>
+      <div class="card"><h4>Tablero de LEDs</h4><p class="big">Tira WS2812B 5 m</p><p class="sub">Cortada en 5 tramos, manejada por un ESP8266 por USB serial.</p></div>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 640 372" role="img" aria-label="Topología: router arriba, dos switches, y abajo TERMINAL y FILE-SERVER reales más WORKSTATION y SECURITY solo simulados. Cada enlace es una rama de LED numerada 0 a 4.">
+        <!-- links -->
+        <g stroke="currentColor" stroke-width="2" fill="none" opacity="0.55">
+          <line x1="320" y1="64" x2="192" y2="163"/>
+          <line x1="320" y1="64" x2="448" y2="163"/>
+          <line x1="192" y1="163" x2="192" y2="265"/>
+        </g>
+        <!-- fileserver path emphasized -->
+        <g class="ss-ac" stroke-width="2.5" fill="none">
+          <line x1="448" y1="163" x2="352" y2="272"/>
+        </g>
+        <g stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="5 5" opacity="0.5">
+          <line x1="448" y1="163" x2="461" y2="272"/>
+          <line x1="448" y1="163" x2="570" y2="272"/>
+        </g>
+        <!-- branch id labels -->
+        <g font-family="var(--mono)" font-size="12" class="sf-ac">
+          <text x="247" y="110" text-anchor="middle">0</text>
+          <text x="196" y="220" text-anchor="middle">0</text>
+          <text x="392" y="112" text-anchor="middle">1</text>
+          <text x="392" y="225" text-anchor="middle">2</text>
+          <text x="462" y="222" text-anchor="middle" fill="currentColor" opacity="0.6">3</text>
+          <text x="520" y="222" text-anchor="middle" fill="currentColor" opacity="0.6">4</text>
+        </g>
+        <!-- nodes -->
+        <g font-family="var(--mono)" font-size="11.5" text-anchor="middle">
+          <!-- router -->
+          <rect x="268" y="44" width="104" height="40" rx="7" class="sf-box" stroke="currentColor"/>
+          <text x="320" y="68" fill="currentColor">ROUTER</text>
+          <!-- switches -->
+          <rect x="146" y="143" width="92" height="36" rx="7" class="sf-box" stroke="currentColor"/>
+          <text x="192" y="165" fill="currentColor">SWITCH-izq</text>
+          <rect x="402" y="143" width="92" height="36" rx="7" class="sf-box" stroke="currentColor"/>
+          <text x="448" y="165" fill="currentColor">SWITCH-der</text>
+          <!-- terminal (real) -->
+          <rect x="142" y="265" width="100" height="40" rx="7" class="sf-box ss-ac" stroke-width="2"/>
+          <text x="192" y="283" fill="currentColor">TERMINAL</text>
+          <text x="192" y="337" class="sf-mut" font-size="10">.10</text>
+          <!-- fileserver (real) -->
+          <rect x="302" y="272" width="100" height="40" rx="7" class="sf-box ss-ac" stroke-width="2"/>
+          <text x="352" y="290" fill="currentColor">FILE-SERVER</text>
+          <text x="352" y="344" class="sf-mut" font-size="10">.20</text>
+          <!-- workstation (sim) -->
+          <rect x="413" y="272" width="96" height="40" rx="7" fill="none" stroke="currentColor" stroke-dasharray="5 5" opacity="0.65"/>
+          <text x="461" y="296" fill="currentColor" opacity="0.7" font-size="10">WORKST.</text>
+          <!-- security (sim) -->
+          <rect x="520" y="272" width="96" height="40" rx="7" fill="none" stroke="currentColor" stroke-dasharray="5 5" opacity="0.65"/>
+          <text x="568" y="296" fill="currentColor" opacity="0.7" font-size="10">SECURITY</text>
+        </g>
+        <!-- legend -->
+        <g font-family="var(--mono)" font-size="10.5">
+          <rect x="24" y="24" width="18" height="10" rx="2" fill="none" class="ss-ac" stroke-width="2"/>
+          <text x="48" y="33" class="sf-mut">real (lo montás)</text>
+          <rect x="190" y="24" width="18" height="10" rx="2" fill="none" stroke="currentColor" stroke-dasharray="4 4" opacity="0.65"/>
+          <text x="214" y="33" class="sf-mut">solo simulado</text>
+          <text x="360" y="33" class="sf-ac">0–4 = rama de LED</text>
+        </g>
+      </svg>
+      <figcaption>La red del tablero. En modo Real solo existen de verdad el ROUTER, la TERMINAL y el FILE-SERVER;
+        WORKSTATION y SECURITY viven en el modo Simulado. Cada enlace es una “rama” de LED (0 a 4).</figcaption>
+    </figure>
+
+    <div class="box note"><span class="lbl">Antes de empezar</span>
+      <p>Cloná el repo en las dos PC (o usá los instaladores de la Parte C, que lo clonan solos).
+        Si querés probar sin nada de hardware, saltá a <a href="#probar">Probar</a>: el <strong>modo Simulado</strong>
+        funciona solo con la app.</p></div>
+  </section>
+
+  <section id="materiales">
+    <h2><span class="n">00</span> Lista de materiales</h2>
+    <div class="grid">
+      <div class="card">
+        <h4>LEDs / electrónica</h4>
+        <ul class="check">
+          <li>Tira <strong>WS2812B 5V</strong>, 60 LED/m, 5 m (300 LEDs)</li>
+          <li><strong>ESP8266 NodeMCU</strong> + cable USB de datos</li>
+          <li>Fuente switching <strong>5V / 10A</strong> (50 W)</li>
+          <li><strong>Level shifter 3.3→5V</strong> (74AHCT125)</li>
+          <li>Cables, estaño, un capacitor 1000 µF (opcional)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Red</h4>
+        <ul class="check">
+          <li>Router (guía para TP-Link <strong>AX3000</strong>)</li>
+          <li>1–2 switches</li>
+          <li>Cables de red para el tablero</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Computadoras</h4>
+        <ul class="check">
+          <li>PC <strong>TERMINAL</strong> (Windows o Linux)</li>
+          <li>PC/mini-PC <strong>FILE-SERVER</strong> con Docker</li>
+          <li>Un navegador y, para modo real, <strong>nmap</strong></li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub">La workstation y el security del mapa <strong>no</strong> son máquinas reales: son parte del mundo
+      simulado. No hace falta comprarlas ni cablearlas.</p>
+  </section>
+
+  <section id="leds">
+    <h2><span class="n">A</span> Armar los LEDs</h2>
+    <p>La tira es una sola cadena de 5 m; se corta en 5 tramos (uno por rama) y cada tramo lleva su propia línea
+      de datos a un pin del ESP8266. La fuente alimenta todos los tramos; el micro solo comparte la tierra.</p>
+
+    <figure>
+      <svg viewBox="0 0 560 540" role="img" aria-label="Cadena de armado de los LEDs: la fuente de 5V 10A alimenta +5V y GND; el ESP8266 se alimenta por USB y comparte GND con la fuente; sus 5 datos a 3.3 voltios pasan por un level shifter que los sube a 5 voltios, uno por cada uno de los 5 tramos de la tira.">
+        <!-- rails -->
+        <line x1="70" y1="54" x2="70" y2="492" class="ss-ac" stroke-width="2.5"/>
+        <line x1="490" y1="54" x2="490" y2="452" stroke="currentColor" stroke-width="2" opacity="0.6"/>
+        <text x="60" y="48" text-anchor="end" font-family="var(--mono)" font-size="11" class="sf-ac">GND común</text>
+        <text x="500" y="48" font-family="var(--mono)" font-size="11" class="sf-mut">+5V</text>
+        <!-- fuente -->
+        <rect x="180" y="24" width="200" height="56" rx="8" class="sf-box" stroke="currentColor"/>
+        <text x="280" y="57" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="currentColor">FUENTE 5V / 10A</text>
+        <path d="M180 54 H70" class="ss-ac" stroke-width="2.5" fill="none"/>
+        <path d="M380 54 H490" stroke="currentColor" stroke-width="2" fill="none" opacity="0.6"/>
+        <!-- ESP -->
+        <rect x="175" y="188" width="210" height="72" rx="8" class="sf-box" stroke="currentColor"/>
+        <text x="280" y="218" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="currentColor">ESP8266 (NodeMCU)</text>
+        <text x="280" y="240" text-anchor="middle" font-family="var(--mono)" font-size="10.5" class="sf-mut">se alimenta por USB (PC terminal)</text>
+        <path d="M175 230 H70" class="ss-ac" stroke-width="2.5" fill="none"/>
+        <text x="120" y="223" text-anchor="middle" font-family="var(--mono)" font-size="10" class="sf-ac">GND</text>
+        <!-- arrow ESP -> shifter -->
+        <line x1="280" y1="260" x2="280" y2="300" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+        <text x="292" y="284" font-family="var(--mono)" font-size="10.5" class="sf-mut">5 datos · 3.3V</text>
+        <!-- shifter -->
+        <rect x="150" y="300" width="260" height="58" rx="8" class="sf-box ss-ac" stroke-width="2"/>
+        <text x="280" y="327" text-anchor="middle" font-family="var(--mono)" font-size="12.5" fill="currentColor">LEVEL SHIFTER 3.3V → 5V</text>
+        <text x="280" y="346" text-anchor="middle" font-family="var(--mono)" font-size="10" class="sf-mut">74AHCT125 · imprescindible con ESP8266</text>
+        <path d="M410 322 H490" stroke="currentColor" stroke-width="2" fill="none" opacity="0.6"/>
+        <path d="M150 346 H70" class="ss-ac" stroke-width="2.5" fill="none"/>
+        <!-- arrow shifter -> strip -->
+        <line x1="280" y1="358" x2="280" y2="398" class="ss-ac" stroke-width="2.5" marker-end="url(#ar2)"/>
+        <text x="292" y="382" font-family="var(--mono)" font-size="10.5" class="sf-ac">5 datos · 5V</text>
+        <!-- strip -->
+        <rect x="140" y="398" width="280" height="72" rx="8" class="sf-box" stroke="currentColor"/>
+        <text x="280" y="427" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="currentColor">TIRA WS2812B · 5 tramos</text>
+        <text x="280" y="447" text-anchor="middle" font-family="var(--mono)" font-size="10" class="sf-mut">cada tramo: +5V · GND · DATA (una rama)</text>
+        <path d="M420 420 H490" stroke="currentColor" stroke-width="2" fill="none" opacity="0.6"/>
+        <path d="M140 452 H70" class="ss-ac" stroke-width="2.5" fill="none"/>
+        <text x="280" y="500" text-anchor="middle" font-family="var(--mono)" font-size="10.5" class="sf-amb">inyectá +5V también al final de cada tramo largo</text>
+        <defs>
+          <marker id="ar" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="currentColor"/></marker>
+          <marker id="ar2" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" class="sf-ac"/></marker>
+        </defs>
+      </svg>
+      <figcaption>Cadena de datos y alimentación. Lo verde es la <strong>tierra común</strong> (fuente + micro): si falta,
+        los LEDs titilan o no prenden. El ESP8266 se alimenta por USB, nunca desde el 5V de la fuente.</figcaption>
+    </figure>
+
+    <h3>A1 · Cortar y cablear</h3>
+    <ol class="steps">
+      <li><span class="step-t">Cortá la tira en 5 tramos</span>, uno por rama (ver la tabla de abajo). Cortá por las
+        líneas marcadas (cada 1 LED ≈ 1,7 cm). Fijate la <strong>flecha</strong> impresa: el dato entra por el lado de la flecha.</li>
+      <li><span class="step-t">Uní 5V y GND de todos los tramos</span> a la fuente de 5V/10A. El <strong>GND del ESP8266
+        tiene que ir también al GND de la fuente</strong> (tierra común — es el error #1).</li>
+      <li><span class="step-t">Pasá cada línea de datos por el level shifter</span> (3.3→5V) antes de entrar al tramo.
+        El ESP saca 3.3V y el WS2812B necesita ~3.5V, así que sin shifter la señal falla.</li>
+      <li><span class="step-t">Inyectá 5V en ambos extremos</span> de los tramos largos: 5 m pierden tensión y los
+        últimos LEDs se ven tenues o cambian de color.</li>
+    </ol>
+
+    <h3>A2 · Mapeo de ramas y pines (ESP8266)</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Rama</th><th>Tramo físico</th><th>Pin ESP8266</th></tr></thead>
+        <tbody>
+          <tr><td><code>0</code></td><td>router ↔ switch-izq ↔ TERMINAL</td><td><code>D1</code> (GPIO5)</td></tr>
+          <tr><td><code>1</code></td><td>router ↔ switch-der</td><td><code>D2</code> (GPIO4)</td></tr>
+          <tr><td><code>2</code></td><td>switch-der ↔ FILE-SERVER</td><td><code>D5</code> (GPIO14)</td></tr>
+          <tr><td><code>3</code></td><td>switch-der ↔ WORKSTATION-01</td><td><code>D6</code> (GPIO12)</td></tr>
+          <tr><td><code>4</code></td><td>switch-der ↔ SECURITY-SERVER</td><td><code>D7</code> (GPIO13)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>A3 · Cargar el firmware</h3>
+    <ol class="steps">
+      <li><span class="step-t">Instalá el Arduino IDE</span>, el soporte de placas <strong>ESP8266</strong>
+        (Gestor de tarjetas) y la librería <strong>FastLED</strong> (Gestor de librerías).</li>
+      <li><span class="step-t">Abrí</span> <code>firmware/cyberlab_leds/cyberlab_leds.ino</code> y elegí la placa
+        <em>NodeMCU 1.0 (ESP-12E)</em> y el puerto.</li>
+      <li><span class="step-t">Ajustá los pines al ESP8266</span> (arriba del sketch):
+        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="k">#define</span> PIN_B0 D1   <span class="c">// GPIO5  — rama 0 (TERMINAL)</span>
+<span class="k">#define</span> PIN_B1 D2   <span class="c">// GPIO4  — rama 1 (troncal)</span>
+<span class="k">#define</span> PIN_B2 D5   <span class="c">// GPIO14 — rama 2 (FILE-SERVER)</span>
+<span class="k">#define</span> PIN_B3 D6   <span class="c">// GPIO12 — rama 3 (WORKSTATION)</span>
+<span class="k">#define</span> PIN_B4 D7   <span class="c">// GPIO13 — rama 4 (SECURITY)</span></pre></div>
+      </li>
+      <li><span class="step-t">Poné el largo real de cada tramo</span> en <code>BRANCH_COUNTS</code> (la suma ≈ 300).
+        No toques <code>MAX_LEDS</code>: se calcula solo.
+        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="c">// poné el largo real de cada tramo cortado; la suma deberia dar ~300</span>
+<span class="k">constexpr int</span> BRANCH_COUNTS[NUM_BRANCHES] = { 60, 60, 60, 60, 60 };</pre></div>
+      </li>
+      <li><span class="step-t">Subí el sketch.</span> El firmware ya limita el consumo a 9 A para la fuente de 10 A
+        (no hay riesgo de brownout) y las animaciones son verde/ámbar/cyan a ~55% de brillo.</li>
+    </ol>
+
+    <div class="box tip"><span class="lbl">Consumo</span>
+      <p>Los 300 LEDs en blanco pleno pedirían 18 A, pero el lab nunca hace eso: el pico real (todos en cyan al final)
+        es ~6 A, muy por debajo de los 10 A. El tope de 9 A del firmware es la red de seguridad.</p></div>
+
+    <h3>A4 · Probar los LEDs sin la app</h3>
+    <div class="code"><div class="bar"><span class="t">terminal · led_test</span><button class="copy">copiar</button></div><pre>python tools/led_test.py --port COM3              <span class="c"># secuencia demo</span>
+python tools/led_test.py --port COM3 SEG:2:EXPLOIT <span class="c"># un comando puntual</span>
+python tools/led_test.py --port COM3 --interactive <span class="c"># tipear a mano</span></pre></div>
+    <p class="sub">En Linux el puerto suele ser <code>/dev/ttyUSB0</code>. Deberías ver: barrido al <code>DISCOVER</code>,
+      fijo al <code>FOCUS</code>, pulso ámbar al <code>EXPLOIT</code>, chase cyan al <code>TRANSFER</code>.</p>
+  </section>
+
+  <section id="red">
+    <h2><span class="n">B</span> Armar la red</h2>
+    <p>La red va con <strong>IPs fijas</strong> que coinciden con <code>config.toml</code>. Solo el FILE-SERVER
+      necesita ser una máquina real; el resto del mapa es visual.</p>
+    <ol class="steps">
+      <li><span class="step-t">Armá el árbol físico:</span> router → switches, la TERMINAL al switch izquierdo y el
+        FILE-SERVER al switch derecho (como el diagrama de arriba).</li>
+      <li><span class="step-t">Asigná IPs fijas</span> (o reservas DHCP) que coincidan con la config:</li>
+    </ol>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Equipo</th><th>IP</th><th>¿Real?</th></tr></thead>
+        <tbody>
+          <tr><td>router</td><td><code>192.168.10.1</code></td><td>sí</td></tr>
+          <tr><td>TERMINAL-VISITANTE</td><td><code>192.168.10.10</code></td><td>sí</td></tr>
+          <tr><td>FILE-SERVER</td><td><code>192.168.10.20</code></td><td>sí</td></tr>
+          <tr><td>WORKSTATION-01</td><td><code>192.168.10.30</code></td><td>simulado</td></tr>
+          <tr><td>SECURITY-SERVER</td><td><code>192.168.10.40</code></td><td>simulado</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Red <code>192.168.10.0/24</code>. Paso a paso del router TP-Link AX3000 y los switches en
+      <code>docs/RED-ROUTER.md</code>.</p>
+    <div class="box danger"><span class="lbl">Seguridad</span>
+      <p>El FILE-SERVER es <strong>inseguro por diseño</strong> (vulnerable a propósito). Usalo <strong>solo</strong>
+        en esta red aislada, nunca conectado a internet.</p></div>
+  </section>
+
+  <section id="servidores">
+    <h2><span class="n">C</span> Armar los servidores</h2>
+
+    <h3>C1 · FILE-SERVER (el nodo)</h3>
+    <p>Es un contenedor Docker con la web vulnerable (puerto <strong>80</strong>) y SSH (puerto <strong>2222</strong>
+      en el host). Los instaladores lo construyen, lo encienden y <strong>verifican</strong> que responda.</p>
+    <div class="code"><div class="bar"><span class="t">Linux</span><button class="copy">copiar</button></div><pre>bash scripts/setup-fileserver.sh</pre></div>
+    <div class="code"><div class="bar"><span class="t">Windows (Docker Desktop)</span><button class="copy">copiar</button></div><pre>scripts\setup-fileserver.bat</pre></div>
+    <p>Control del nodo (encender, apagar, reiniciar limpio entre visitantes, ver estado y logs):</p>
+    <div class="code"><div class="bar"><span class="t">Linux / Windows</span><button class="copy">copiar</button></div><pre>node/fileserver.sh  on | off | reset | status | logs    <span class="c"># Linux</span>
+node\fileserver.bat on | off | reset | status | logs    <span class="c"># Windows</span></pre></div>
+    <div class="box note"><span class="lbl">Verificación automática</span>
+      <p>El instalador chequea: contenedor corriendo · web en <code>:80</code> · usuario <code>ctf</code> · SSH en
+        <code>2222</code>. Si marca algo con <code>[x]</code>, resolvelo antes del evento (mirá
+        <code>fileserver.sh logs</code>).</p></div>
+
+    <h3>C2 · TERMINAL (PC del visitante)</h3>
+    <p>Dos caminos. El más rápido en Windows es la <strong>release</strong> (no instala Python):</p>
+    <ol class="steps">
+      <li><span class="step-t">Descargá</span> <code>CyberLab-...-windows.zip</code> desde
+        <a href="https://github.com/Monoo12/CyberLab/releases" target="_blank" rel="noopener">github.com/Monoo12/CyberLab/releases</a>,
+        descomprimilo y doble clic en <code>CyberLab.exe</code>. Arranca en Simulado.</li>
+      <li><span class="step-t">O instalá con scripts</span> (crea el entorno e instala los requisitos):
+        <div class="code"><div class="bar"><span class="t">Linux</span><button class="copy">copiar</button></div><pre>bash scripts/setup-terminal.sh
+./run-terminal.sh</pre></div>
+        <div class="code"><div class="bar"><span class="t">Windows</span><button class="copy">copiar</button></div><pre>scripts\setup-terminal.bat
+run-terminal.bat</pre></div>
+      </li>
+    </ol>
+    <div class="box warn"><span class="lbl">Para el modo Real en Windows</span>
+      <p>Instalá <strong>nmap con Npcap</strong> y corré la app <strong>como administrador</strong>: el
+        <code>scan</code> necesita Npcap/privilegios para el barrido de red. Hace falta un navegador (Edge/Chrome)
+        para el paso <code>connect</code>.</p></div>
+  </section>
+
+  <section id="config">
+    <h2><span class="n">D</span> Configurar todo</h2>
+    <p>La config vive en <code>config.toml</code> (se crea desde <code>config.example.toml</code>; no se versiona).
+      Lo más importante: que las credenciales y los puertos coincidan entre la app y el nodo.</p>
+
+    <h3>D1 · Lo que DEBE coincidir</h3>
+    <p>Esto es lo que más rompe en vivo. Si no coincide, <code>ls</code>/<code>read</code> o <code>exploit hydra</code>
+      fallan en silencio.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Qué</th><th>App (config.toml)</th><th>Nodo (docker-compose)</th><th>Regla</th></tr></thead>
+        <tbody>
+          <tr><td>Clave del server</td><td><code>[creds].leak_pass</code></td><td><code>LAB_PASS</code></td><td>iguales</td></tr>
+          <tr><td>Usuario SSH</td><td><code>[fileserver].ssh_user</code></td><td><code>ctf</code> (fijo)</td><td><code>"ctf"</code></td></tr>
+          <tr><td>Diccionario</td><td><code>[creds].wordlist</code></td><td>—</td><td>debe contener <code>leak_pass</code></td></tr>
+          <tr><td>Puerto SSH</td><td><code>[fileserver].ssh_port</code></td><td><code>2222:22</code></td><td><code>2222</code></td></tr>
+          <tr><td>IP / web</td><td><code>[fileserver].ip</code> + <code>[[hosts]]</code></td><td>IP fija + <code>80:80</code></td><td>coinciden</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sub">Los defaults ya coinciden: usuario <code>admin</code> / clave <code>S3cr3t-2024!</code>. Si cambiás la
+      clave, cambiala en los dos lados.</p>
+
+    <h3>D2 · El puerto serial de los LEDs</h3>
+    <div class="code"><div class="bar"><span class="t">config.toml</span><button class="copy">copiar</button></div><pre><span class="k">[serial]</span>
+enabled = true
+port    = <span class="k">"COM3"</span>        <span class="c"># Linux: "/dev/ttyUSB0"</span>
+baud    = 115200</pre></div>
+
+    <h3>D3 · Encender en modo Real</h3>
+    <div class="code"><div class="bar"><span class="t">terminal</span><button class="copy">copiar</button></div><pre>python -m app.main --engine real          <span class="c"># o elegí "Real" en el menú</span></pre></div>
+    <div class="box tip"><span class="lbl">Pre-flight</span>
+      <p>Al arrancar en Real, la app corre un chequeo (nmap, web del nodo, SSH, wordlist) y muestra
+        <code>[OK]</code> / <code>[!]</code>. Si ves un <code>[!]</code>, arreglalo o volvé a Simulado como fallback.</p></div>
+  </section>
+
+  <section id="probar">
+    <h2><span class="n">E</span> Probar la misión</h2>
+    <p>El visitante recorre siempre la misma secuencia. Probala vos primero en <strong>Simulado</strong> (no necesita
+      red ni hardware), después en Real.</p>
+    <div class="code"><div class="bar"><span class="t">siempre funciona · sin hardware</span><button class="copy">copiar</button></div><pre>python -m app.main --engine simulated</pre></div>
+    <div class="grid">
+      <div class="card"><h4>1 · scan</h4><p class="sub">descubre los dispositivos de la red</p></div>
+      <div class="card"><h4>2 · inspect</h4><p class="sub">ve puertos/servicios del objetivo</p></div>
+      <div class="card"><h4>3 · connect</h4><p class="sub">abre la web del FILE-SERVER</p></div>
+      <div class="card"><h4>4 · exploit</h4><p class="sub">vence el login (leak / sqli / hydra)</p></div>
+      <div class="card"><h4>5 · ls / read</h4><p class="sub">lee <code>/restricted/secret.txt</code></p></div>
+    </div>
+    <div class="box note"><span class="lbl">Entre visitantes</span>
+      <p>Reiniciá el nodo a estado limpio con <code>node/fileserver.sh reset</code> (o <code>.bat</code> en Windows).
+        Y tené siempre el modo <strong>Simulado</strong> a mano por si algo se cae en vivo.</p></div>
+  </section>
+
+  <section id="problemas">
+    <h2><span class="n">!!</span> Si algo falla</h2>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Síntoma</th><th>Causa / arreglo</th></tr></thead>
+        <tbody>
+          <tr><td>LEDs titilan o no prenden</td><td>Falta <strong>tierra común</strong> entre fuente y micro. Unir GND.</td></tr>
+          <tr><td>Colores random (ESP8266)</td><td>Datos a 3.3V bajo el umbral del WS2812B: poné el <strong>level shifter</strong>.</td></tr>
+          <tr><td>Solo prende el principio</td><td>Tramo largo sin re-inyección: inyectá 5V también al final.</td></tr>
+          <tr><td>Una rama muerta</td><td>Flecha de datos al revés, o pin equivocado en el sketch.</td></tr>
+          <tr><td>El micro no aparece (puerto)</td><td>Cable USB solo-carga (usá uno de datos) o falta el driver CH340/CP210x.</td></tr>
+          <tr><td><code>scan</code> sin hosts (real)</td><td>nmap sin Npcap/admin (Windows), red mal cableada o IPs fuera del CIDR.</td></tr>
+          <tr><td><code>exploit</code> falla</td><td>La web del nodo no responde: <code>fileserver.sh status</code> / <code>logs</code>.</td></tr>
+          <tr><td><code>ls</code>/<code>read</code> fallan</td><td>Credenciales no coinciden, o <code>ssh_port</code> ≠ <code>2222</code>.</td></tr>
+          <tr><td>Nada anda en vivo</td><td>Cambiá a <strong>modo Simulado</strong> y seguí la muestra.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">Cyber Lab · guía de armado · detalle completo en <code>docs/</code> (GUIA-HARDWARE, DESPLIEGUE-REAL, RED-ROUTER, LEDS).</p>
+  </section>
+
+</main>
+
+<script>
+  (function(){
+    var root=document.documentElement, KEY="cyberlab-guide-theme", btn=document.getElementById("themeToggle");
+    try{ var s=localStorage.getItem(KEY); if(s==="dark"||s==="light") root.setAttribute("data-theme",s); }catch(e){}
+    function cur(){ var a=root.getAttribute("data-theme"); if(a) return a;
+      return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"; }
+    if(btn) btn.addEventListener("click",function(){ var n=cur()==="dark"?"light":"dark";
+      root.setAttribute("data-theme",n); try{localStorage.setItem(KEY,n);}catch(e){} });
+  })();
+  document.querySelectorAll(".code").forEach(function(block){
+    var btn=block.querySelector(".copy"), pre=block.querySelector("pre"); if(!btn||!pre) return;
+    btn.addEventListener("click",function(){
+      var text=pre.innerText;
+      function done(m){ btn.textContent=m; setTimeout(function(){btn.textContent="copiar";},1400); }
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){done("copiado");},function(){sel();});
+      } else sel();
+      function sel(){ try{ var r=document.createRange(); r.selectNodeContents(pre);
+        var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); done("seleccionado"); }catch(e){done("—");} }
+    });
+  });
+  (function(){
+    var links=Array.prototype.slice.call(document.querySelectorAll(".nav a"));
+    var map={}; links.forEach(function(a){ map[a.getAttribute("href").slice(1)]=a; });
+    if(!("IntersectionObserver" in window)) return;
+    var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){
+      links.forEach(function(l){l.classList.remove("active");});
+      var a=map[e.target.id]; if(a){ a.classList.add("active");
+        if(a.scrollIntoView) a.scrollIntoView({inline:"center",block:"nearest"}); } } }); },
+      {rootMargin:"-25% 0px -70% 0px"});
+    document.querySelectorAll("section[id]").forEach(function(s){io.observe(s);});
+  })();
+</script>
+</body>
+</html>
