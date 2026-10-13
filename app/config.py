@@ -44,7 +44,7 @@ class Network:
 class FileServer:
     ip: str = "192.168.10.20"
     http_port: int = 80
-    ssh_port: int = 22
+    ssh_port: int = 2222  # el nodo publica su SSH en host:2222 (node/docker-compose.yml)
     ssh_user: str = "ctf"
     url: str = "http://192.168.10.20:80"
     secret_path: str = "/restricted/secret.txt"

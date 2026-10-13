@@ -2,15 +2,22 @@
 # Spec de PyInstaller para la app del visitante (Cyber Lab).
 # Build one-folder (mas robusto para tkinter/customtkinter).
 # config.toml queda EXTERNO y editable junto al ejecutable (no se embebe).
+import os
+
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 datas = collect_data_files("customtkinter")
-# incluir iconos/pngs del panel visual si existen
-datas += [("app/assets", "app/assets")]
+# Incluir iconos/pngs del panel visual SOLO si la carpeta existe y tiene algo util.
+# En un clon limpio puede no existir (git no versiona carpetas vacias, salvo el
+# .gitkeep): sin esta guarda, PyInstaller aborta con "Unable to find app/assets".
+if os.path.isdir("app/assets") and any(
+    f != ".gitkeep" for f in os.listdir("app/assets")
+):
+    datas += [("app/assets", "app/assets")]
 
 hiddenimports = (
     collect_submodules("customtkinter")
-    + ["paramiko", "serial", "PIL", "PIL.ImageTk", "nmap"]
+    + ["paramiko", "serial", "PIL", "PIL.ImageTk"]
 )
 
 a = Analysis(
