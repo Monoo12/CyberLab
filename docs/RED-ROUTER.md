@@ -124,13 +124,14 @@ Guardá cada una. Después reiniciá los equipos (o `ipconfig /renew`) para que 
 
 ---
 
-## Cableado (árbol, mapea al tablero y a los LEDs) — vale para ambas familias
+## Cableado (mapea a los 4 tramos de LED del tablero) — vale para ambas familias
 
 ```
-Router LAN1 ───── Switch IZQUIERDO ──── PC visitante (.10)     -> rama LED 0
-Router LAN2 ───── Switch DERECHO   ──── FILE-SERVER (.20)      -> rama LED 2
-                                   ──── workstation (.30)      -> rama LED 3  (opcional)
-                                   ──── security (.40)         -> rama LED 4  (opcional)
+PC visitante (.10) ─T1─ Switch IZQ ─T2─ Router ─T3─ Switch DER ─T4─ FILE-SERVER (.20)
+                                                         ├─ workstation (.30)   (opcional, sin LED)
+                                                         └─ security (.40)      (opcional, sin LED)
+
+T1..T4 = Tramos de LED 1..4 (ids 0..3)   ·   Router LAN1 -> Switch IZQ, LAN2 -> Switch DER
 ```
 (2 cables del router, uno a cada switch — **no** conectar los switches entre sí.)
 El micro de los LEDs **no va a la red** → va por **USB a la PC**.
@@ -152,8 +153,8 @@ estas direcciones.
 - Para **modo real** solo necesitás sí o sí: router (`.1`), PC (`.10`) y nodo FILE-SERVER (`.20`).
   Los decoys `.30`/`.40` son opcionales (cualquier aparato que responda al ping sirve para que
   aparezca en el `scan`; si no, simplemente no salen y la misión igual apunta al `.20`).
-- Usamos **2 switches** por la estética del tablero (izq/der) y para que cada rama de LED tenga su
-  tramo; eléctricamente con uno alcanzaría.
+- Usamos **2 switches** por la estética del tablero (izq/der) y para que el camino de LEDs tenga sus
+  4 tramos; eléctricamente con uno alcanzaría.
 - Anotá la **contraseña de admin del router** y guardala con el resto de credenciales del evento.
 
 ## Fuentes (TP-Link)

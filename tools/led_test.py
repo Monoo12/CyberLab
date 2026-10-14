@@ -34,9 +34,8 @@ def _port_from_config() -> str | None:
 
 DEMO = [
     "OFF", "IDLE",
-    "SEG:0:DISCOVER", "SEG:1:DISCOVER", "SEG:2:DISCOVER",
-    "SEG:3:DISCOVER", "SEG:4:DISCOVER",
-    "SEG:2:FOCUS", "ALL:EXPLOIT", "ALL:TRANSFER", "OFF",
+    "SEG:0:DISCOVER", "SEG:1:DISCOVER", "SEG:2:DISCOVER", "SEG:3:DISCOVER",
+    "SEG:3:FOCUS", "ALL:EXPLOIT", "ALL:TRANSFER", "OFF",
 ]
 
 

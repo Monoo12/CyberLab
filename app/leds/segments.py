@@ -3,25 +3,27 @@
 Espejo del firmware (firmware/cyberlab_leds): cada 'rama' es un pin distinto del
 microcontrolador con su propia tira. El id de segmento viaja por serial (SEG:<id>:<anim>).
 
-Topologia (arbol, 6 enlaces / 5 ramas de datos):
-  rama 0: router <-> switch-izq <-> TERMINAL           (una tira continua)
-  rama 1: router <-> switch-der                         (troncal derecho)
-  rama 2: switch-der <-> FILE-SERVER
-  rama 3: switch-der <-> WORKSTATION-01
-  rama 4: switch-der <-> SECURITY-SERVER
+Topologia del tablero (cadena de 4 tramos, en "U" invertida):
+  id 0 = Tramo 1: TERMINAL   <-> switch-izq    (50 cm)
+  id 1 = Tramo 2: switch-izq <-> router        (77 cm)
+  id 2 = Tramo 3: router     <-> switch-der    (73 cm)
+  id 3 = Tramo 4: switch-der <-> FILE-SERVER   (43 cm)
+
+WORKSTATION y SECURITY cuelgan del switch-der pero no tienen tramo propio en el
+tablero (solo existen en el modo Simulado): su ruta se enciende hasta el switch-der.
 """
 from __future__ import annotations
 
 # role del host  ->  ids de segmentos que se encienden para llegar a el desde la terminal
 PATH_TO_ROLE: dict[str, list[int]] = {
-    "router":      [0],
     "terminal":    [0],
-    "fileserver":  [0, 1, 2],
-    "workstation": [0, 1, 3],
-    "security":    [0, 1, 4],
+    "router":      [0, 1],
+    "fileserver":  [0, 1, 2, 3],
+    "workstation": [0, 1, 2],
+    "security":    [0, 1, 2],
 }
 
-ALL_SEGMENTS: list[int] = [0, 1, 2, 3, 4]
+ALL_SEGMENTS: list[int] = [0, 1, 2, 3]
 
 # Animaciones reconocidas por el firmware
 ANIM_DISCOVER = "DISCOVER"  # barrido suave al descubrir

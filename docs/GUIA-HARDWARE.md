@@ -10,9 +10,10 @@ El software ya está listo; esta guía explica cómo conectarlo al mundo físico
 1. Instalá el **Arduino IDE** y la librería **FastLED** (Gestor de librerías → "FastLED").
 2. Abrí `firmware/cyberlab_leds/cyberlab_leds.ino`.
 3. Elegí tu placa (Arduino UNO/Nano, ESP8266 NodeMCU o ESP32) y el puerto.
-4. **Ajustá al tope del sketch** (ver sección 3): pines de datos y cantidad de LEDs por rama.
+4. **Ajustá al tope del sketch** (ver sección 3): pines de datos y, si cortaste distinto, la cantidad
+   de LEDs por rama.
 5. Subí el sketch. Al abrir el Monitor Serie (115200 baud) podés tipear comandos a mano
-   (`SEG:2:EXPLOIT`, `ALL:TRANSFER`, `OFF`).
+   (`SEG:3:EXPLOIT`, `ALL:TRANSFER`, `OFF`).
 
 Sin WiFi de por medio, cualquiera de las tres placas sirve igual: el micro solo lee texto del USB.
 
@@ -20,10 +21,11 @@ Sin WiFi de por medio, cualquiera de las tres placas sirve igual: el micro solo 
 
 La tira es **direccionable** (cada LED se prende solo) — imprescindible para el efecto de recorrido.
 
-- Comprá **una sola tira** (ej. rollo de 5 m) y cortala en los **5 pedazos** (uno por rama). No hacen
-  falta 5 tiras separadas.
+- Comprá **una sola tira** (ej. rollo de 5 m) y cortala en los **4 pedazos** (uno por tramo, ver §3).
+  Usás ~2,4 m; el resto sobra.
 - Cada pedazo tiene 3 cables: **5V**, **GND** y **DATA IN**. Mirá la **flecha** impresa: el dato
-  entra por el lado de la flecha. Conectada al revés **no funciona**.
+  entra por el lado de la flecha. Conectada al revés **no funciona**. Podés meter el DATA IN por el
+  extremo que te quede más cómodo; si la animación sale al revés, se corrige con `BRANCH_REVERSED`.
 - **5V y GND se comparten** entre todos los pedazos (todos a la misma fuente 5V).
 - El **DATA de cada pedazo va a su propio pin** del micro (ver mapeo abajo).
 - ⚠️ **Tierra común obligatoria**: el **GND del micro** tiene que estar unido al **GND de la fuente**
@@ -33,15 +35,14 @@ La tira es **direccionable** (cada LED se prende solo) — imprescindible para e
   LEDs no se vean tenues o cambien de color por caída de tensión.
 
 ### Fuente de alimentación (5V / 10A, fija)
-La tira es de **5 m (~300 LEDs)**. Un WS2812B a blanco pleno consume ~60 mA → 300 LEDs darían ~18 A
-en teoría, **más de lo que entrega la fuente**. Por eso el laboratorio usa una **fuente switching
-5V / 10A (50 W)** y el **firmware limita el consumo** a 9 A
-(`FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000)`): FastLED autoescala el brillo en cada frame para
-no superar ese tope, así no hay riesgo de brownout ni de reset del micro. **No** hace falta una fuente
-de 18–20 A.
+En el tablero van **144 LEDs** (los 4 tramos). Un WS2812B a blanco pleno consume ~60 mA → 144 LEDs
+darían ~8,6 A en el peor caso teórico, dentro de la **fuente switching 5V / 10A (50 W)**. Igual el
+**firmware limita el consumo** a 9 A (`FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000)`): FastLED
+autoescala el brillo en cada frame para no superar ese tope, así no hay riesgo de brownout ni de reset
+del micro aunque alargues algún tramo.
 
-- **Inyectá 5V en varios puntos** de los 5 m (al menos al principio y al final de cada tramo largo):
-  la tira pierde tensión de punta a punta y los últimos LEDs se ven tenues o cambian de color.
+- **Inyectá 5V en los dos extremos** de los tramos más largos (Tramo 2 y 3, ~75 cm): la tira pierde
+  tensión de punta a punta y los últimos LEDs se ven tenues o cambian de color.
 - No alimentes la tira desde el pin 5V del micro por USB: usá la fuente, con **GND común** con el micro.
 
 ### Nivel lógico de datos 3.3V → 5V (clave con ESP8266)
@@ -57,28 +58,33 @@ toda la cadena (parpadeos, colores random, ramas muertas). Soluciones, de mejor 
 
 ## 3. Mapeo rama ↔ pin ↔ LEDs (espejo del software)
 
-El firmware y `app/leds/segments.py` comparten el mismo mapeo. Hay **5 ramas** (una tira por rama):
+El firmware y `app/leds/segments.py` comparten el mismo mapeo. El tablero es una **cadena de 4 tramos**
+en "U" invertida, con una tira por tramo:
 
-| Rama (id) | Tramo físico | Pin por defecto | LEDs (placeholder) |
-|---|---|---|---|
-| 0 | router → switch-izq → **TERMINAL** | `PIN_B0` | 60 (suele ser el más largo) |
-| 1 | router → switch-der | `PIN_B1` | 60 |
-| 2 | switch-der → **FILE-SERVER** | `PIN_B2` | 60 |
-| 3 | switch-der → WORKSTATION-01 | `PIN_B3` | 60 |
-| 4 | switch-der → SECURITY-SERVER | `PIN_B4` | 60 |
+| Rama (id) | Tramo | Recorrido físico | Largo | LEDs | Pin sketch | ESP8266 |
+|:---:|:---:|---|:---:|:---:|:---:|:---:|
+| 0 | Tramo 1 | **TERMINAL** → switch-izq | 50 cm | 30 | `PIN_B0` | `D1` (GPIO5) |
+| 1 | Tramo 2 | switch-izq → router | 77 cm | 46 | `PIN_B1` | `D2` (GPIO4) |
+| 2 | Tramo 3 | router → switch-der | 73 cm | 43 | `PIN_B2` | `D5` (GPIO14) |
+| 3 | Tramo 4 | switch-der → **FILE-SERVER** | 43 cm | 25 | `PIN_B3` | `D6` (GPIO12) |
 
-- La tira de **5 m se corta en estos 5 tramos** (~300 LEDs en total). Los valores de arriba son un
-  **placeholder** (división pareja, 60 c/u): medí cada tramo cortado y poné el largo real en
-  `BRANCH_COUNTS`. La suma debería dar ~300.
-- Ajustá en el sketch **solo** `PIN_B0..PIN_B4` (los pines que uses) y `BRANCH_COUNTS` (los largos
-  reales de cada tramo). **`MAX_LEDS` ya no se toca a mano**: el firmware lo deriva del mayor de
-  `BRANCH_COUNTS`, así los buffers nunca se desbordan.
-- Pines sugeridos por placa: Arduino UNO/Nano → 2,3,4,5,6. ESP8266 (NodeMCU) → D1,D2,D5,D6,D7
-  (GPIO5,4,14,12,13). ESP32 → casi cualquier GPIO de salida.
+- A 60 LED/m hay un LED (y una marca de corte) cada ~1,67 cm. Los LEDs de la tabla son los que **entran**
+  en cada tramo medido, redondeando para abajo: **144 en total**. Ya están cargados en `BRANCH_COUNTS`;
+  si al cortar contás otro número, poné el real.
+- Ajustá en el sketch los pines `PIN_B0..PIN_B3` a los que uses (en el NodeMCU: `D1`, `D2`, `D5`, `D6`).
+  **`MAX_LEDS` no se toca a mano**: el firmware lo deriva del mayor de `BRANCH_COUNTS`, así los buffers
+  nunca se desbordan.
+- **Sentido**: las animaciones recorren el camino TERMINAL → FILE-SERVER (el barrido y el chase avanzan
+  hacia el file-server). Si un tramo quedó con el DATA IN del lado contrario, poné `true` en su lugar de
+  `BRANCH_REVERSED` en vez de recablear.
+- WORKSTATION y SECURITY (solo modo Simulado) no tienen tramo: al apuntarles se encienden los tramos 1–3
+  (hasta el switch-der).
+- Pines sugeridos por placa: Arduino UNO/Nano → 2,3,4,5. ESP8266 (NodeMCU) → D1,D2,D5,D6
+  (GPIO5,4,14,12). ESP32 → casi cualquier GPIO de salida.
 
-**Por qué 5 tiras y no una sola:** una tira es una cadena en línea, no se ramifica sola. En el
-tablero hay dos bifurcaciones (router→2 switches y switch-der→3 dispositivos). Usar un pin por rama
-es lo más simple de cablear y de debuggear. FastLED maneja los 5 pines a la vez sin problema.
+**Por qué 4 tiras y no una sola:** cada tramo termina en un equipo distinto (switch o router) y se
+anima por separado según el host al que apuntás. Un pin por tramo es lo más simple de cablear y de
+debuggear (si un tramo falla, los otros siguen), y FastLED maneja los 4 pines a la vez sin problema.
 
 ## 4. Conectar el micro a la PC y configurar el puerto
 
@@ -99,7 +105,7 @@ es lo más simple de cablear y de debuggear. FastLED maneja los 5 pines a la vez
 
 ```bash
 python tools/led_test.py --port COM3                 # secuencia demo
-python tools/led_test.py --port COM3 SEG:2:EXPLOIT   # un comando puntual
+python tools/led_test.py --port COM3 SEG:3:EXPLOIT   # un comando puntual
 python tools/led_test.py --port COM3 --interactive   # tipear comandos
 ```
 
@@ -108,8 +114,8 @@ Deberías ver: barrido al `DISCOVER`, tramo fijo al `FOCUS`, pulso ámbar al `EX
 
 ## 6. Conectar los nodos a la red
 
-1. Armá el árbol físico: rosetas → switches → router, y los dispositivos (FILE-SERVER, etc.) a las
-   bocas del switch derecho, la terminal al switch izquierdo (como el diagrama).
+1. Armá la red física siguiendo los tramos: TERMINAL → switch izquierdo → router → switch derecho →
+   FILE-SERVER (el router va con un cable a cada switch; los switches no se conectan entre sí).
 2. Asigná IPs fijas (o reservas DHCP) que coincidan con la sección `[[hosts]]` de `config.toml`.
 3. En el equipo FILE-SERVER: `cd node && docker compose up -d --build`.
 4. Verificá que la PC lo descubre: `nmap -sn 192.168.10.0/24` debería listar sus IPs.
@@ -121,7 +127,9 @@ Deberías ver: barrido al `DISCOVER`, tramo fijo al `FOCUS`, pulso ámbar al `EX
 |---|---|
 | LEDs titilan o no prenden | **Falta tierra común** entre fuente y micro. Unir GND. |
 | LEDs titilan / colores random (ESP8266) | Señal de datos a 3.3V bajo el umbral del WS2812B; poné un **level shifter 3.3→5V** (ver §2). |
-| Solo prende el principio de una tira | Cadena larga sin re-inyección de 5V; inyectar 5V al final. |
+| Solo prende el principio de una tira | Tramo largo sin re-inyección de 5V; inyectar 5V al final. |
+| La animación de un tramo va al revés | DATA IN del otro lado: poné `true` en ese tramo de `BRANCH_REVERSED`. |
+| Los últimos LEDs de un tramo no prenden | `BRANCH_COUNTS` menor que los LEDs reales: contalos y corregí el número. |
 | Colores equivocados | Orden de color; probar `RGB` en vez de `GRB` en `addLeds<...>`. |
 | Una rama entera muerta | Flecha de DATA al revés, o pin equivocado en el sketch. |
 | El micro no aparece en el puerto | Cable USB solo-carga (usar uno de datos), o falta el driver CH340/CP210x. |

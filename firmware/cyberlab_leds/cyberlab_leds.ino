@@ -15,47 +15,56 @@
  *
  * Cableado (ver docs/GUIA-HARDWARE.md): una tira por rama, cada una a su pin de
  * datos. 5V y GND compartidos con la fuente; GND de la fuente unido al GND del
- * micro. Ajusta los pines y los largos (BRANCH_COUNTS) al tablero real.
+ * micro. Ajusta los pines, los largos (BRANCH_COUNTS) y el sentido
+ * (BRANCH_REVERSED) al tablero real.
  *
  * Requiere la libreria FastLED.  El mapeo id->rama es espejo de
- * app/leds/segments.py (rama 0: router<->switch-izq<->terminal, etc.).
+ * app/leds/segments.py (rama 0 = Tramo 1: terminal<->switch-izq, etc.).
  * ========================================================================== */
 
 #include <FastLED.h>
 
-#define NUM_BRANCHES 5
+#define NUM_BRANCHES 4
 
 // --- Pines de datos por rama (AJUSTAR al hardware) -------------------------
-// En placas tipo Arduino UNO/Nano: 2,3,4,5,6.  En ESP8266 (NodeMCU) usar
-// D1,D2,D5,D6,D7 (GPIO5,4,14,12,13).  En ESP32: casi cualquier GPIO de salida.
+// En placas tipo Arduino UNO/Nano: 2,3,4,5.  En ESP8266 (NodeMCU) usar
+// D1,D2,D5,D6 (GPIO5,4,14,12).  En ESP32: casi cualquier GPIO de salida.
 #define PIN_B0 2
 #define PIN_B1 3
 #define PIN_B2 4
 #define PIN_B3 5
-#define PIN_B4 6
 
-// --- Cantidad de LEDs por rama (AJUSTAR al largo real de cada tramo) --------
-// La tira es WS2812B 5V 60 LED/m, 5 m (~300 LEDs) cortada en los 5 tramos del
-// tablero: un pin de datos por rama. Estos numeros son un PLACEHOLDER (division
-// pareja 5 m / 5 = ~60 c/u): reemplaza cada uno por el largo REAL del tramo
-// cortado. El tramo 0 (router<->switch-izq<->terminal) suele ser el mas largo.
-// La suma de los 5 deberia dar ~300.
-constexpr int BRANCH_COUNTS[NUM_BRANCHES] = { 60, 60, 60, 60, 60 };
+// --- Cantidad de LEDs por rama (largo real de cada tramo) -------------------
+// Tira WS2812B 5V 60 LED/m (1 LED cada ~1,67 cm). El tablero es una cadena de
+// 4 tramos; cada numero es la cantidad de LEDs que ENTRA en el tramo medido
+// (redondeado para abajo, cortando por las marcas de la tira):
+//   rama 0 = Tramo 1  TERMINAL   -> switch-izq   50 cm -> 30 LEDs
+//   rama 1 = Tramo 2  switch-izq -> router       77 cm -> 46 LEDs
+//   rama 2 = Tramo 3  router     -> switch-der   73 cm -> 43 LEDs
+//   rama 3 = Tramo 4  switch-der -> FILE-SERVER  43 cm -> 25 LEDs
+// Total 144 LEDs (~2,4 m de los 5 m). Si al cortar contas otro numero, pone el real.
+constexpr int BRANCH_COUNTS[NUM_BRANCHES] = { 30, 46, 43, 25 };
+
+// --- Sentido de cada rama ---------------------------------------------------
+// Las animaciones recorren el camino TERMINAL -> FILE-SERVER. Si un tramo quedo
+// con su DATA IN (la flecha) del lado opuesto, el barrido iria al reves: pone
+// true en esa rama para invertirlo sin recablear.
+constexpr bool BRANCH_REVERSED[NUM_BRANCHES] = { false, false, false, false };
 
 // MAX_LEDS se deriva SOLO del mayor de BRANCH_COUNTS (dimensiona el buffer de
 // cada rama). Asi los buffers nunca se desbordan aunque cambies los largos de
 // arriba y te olvides de tocar otra cosa.
 constexpr int _cmax2(int a, int b) { return a > b ? a : b; }
-constexpr int MAX_LEDS = _cmax2(BRANCH_COUNTS[0],
-                         _cmax2(BRANCH_COUNTS[1],
-                         _cmax2(BRANCH_COUNTS[2],
-                         _cmax2(BRANCH_COUNTS[3], BRANCH_COUNTS[4]))));
+constexpr int _maxCount(int i = 0) {
+  return i >= NUM_BRANCHES ? 0 : _cmax2(BRANCH_COUNTS[i], _maxCount(i + 1));
+}
+constexpr int MAX_LEDS = _maxCount();
 
 // --- Estados de animacion ---------------------------------------------------
 enum Anim { A_OFF = 0, A_IDLE, A_DISCOVER, A_FOCUS, A_EXPLOIT, A_TRANSFER };
 
-CRGB leds0[MAX_LEDS], leds1[MAX_LEDS], leds2[MAX_LEDS], leds3[MAX_LEDS], leds4[MAX_LEDS];
-CRGB* const BRANCH_LEDS[NUM_BRANCHES] = { leds0, leds1, leds2, leds3, leds4 };
+CRGB leds0[MAX_LEDS], leds1[MAX_LEDS], leds2[MAX_LEDS], leds3[MAX_LEDS];
+CRGB* const BRANCH_LEDS[NUM_BRANCHES] = { leds0, leds1, leds2, leds3 };
 
 uint8_t  branchAnim[NUM_BRANCHES];
 uint32_t branchT0[NUM_BRANCHES];
@@ -79,10 +88,9 @@ void setup() {
   FastLED.addLeds<WS2812B, PIN_B1, GRB>(leds1, BRANCH_COUNTS[1]);
   FastLED.addLeds<WS2812B, PIN_B2, GRB>(leds2, BRANCH_COUNTS[2]);
   FastLED.addLeds<WS2812B, PIN_B3, GRB>(leds3, BRANCH_COUNTS[3]);
-  FastLED.addLeds<WS2812B, PIN_B4, GRB>(leds4, BRANCH_COUNTS[4]);
-  // Limite de consumo: la fuente es 5V/10A (50W). Los ~300 LEDs a blanco pleno
-  // superarian los 10A, asi que FastLED autoescala el brillo en cada show() para
-  // no pasarse (margen al 90% = 9000 mA). Evita brownout/reset del micro. Es
+  // Limite de consumo: la fuente es 5V/10A (50W). Con 144 LEDs el blanco pleno
+  // rondaria 8,6A; igual FastLED autoescala el brillo en cada show() para no
+  // pasar de 9000 mA (90%) si alargas tramos. Evita brownout/reset del micro. Es
   // independiente de setBrightness(): ese es el techo, esto es el limite de corriente.
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 9000);
   FastLED.setBrightness(140);
@@ -138,6 +146,15 @@ void renderBranch(int b) {
         px[i] = (d < 3) ? blend(CRGB::Black, C_CYAN, 255 - d * 80) : CRGB(0, 20, 20);
       }
       break;
+    }
+  }
+
+  // tramo cableado al reves: espejar el frame para que siga el sentido del camino
+  if (BRANCH_REVERSED[b]) {
+    for (int i = 0; i < n / 2; i++) {
+      CRGB t = px[i];
+      px[i] = px[n - 1 - i];
+      px[n - 1 - i] = t;
     }
   }
 }

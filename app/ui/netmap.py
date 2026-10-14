@@ -32,16 +32,25 @@ _LINKS = [
     ("switch-right", "workstation"),
     ("switch-right", "security"),
 ]
-# segmento LED -> enlaces del mapa que se encienden juntos
+# segmento LED (tramo del tablero) -> enlace del mapa que se enciende con el
 _SEG_LINKS = {
-    0: [("router", "switch-left"), ("switch-left", "terminal")],
-    1: [("router", "switch-right")],
-    2: [("switch-right", "fileserver")],
-    3: [("switch-right", "workstation")],
-    4: [("switch-right", "security")],
+    0: [("switch-left", "terminal")],
+    1: [("router", "switch-left")],
+    2: [("router", "switch-right")],
+    3: [("switch-right", "fileserver")],
+}
+# ultimo salto que solo existe en pantalla (sin tramo de LED en el tablero)
+_SCREEN_ONLY_LINKS = {
+    "workstation": [("switch-right", "workstation")],
+    "security":    [("switch-right", "security")],
 }
 # role -> segmentos de su ruta: fuente unica en app/leds/segments.py (no duplicar
 # el mapeo aca; antes vivia en un _ROLE_SEGS local que podia desincronizarse).
+
+
+def _links_for_role(role):
+    links = [l for sid in seg.segments_for_role(role) for l in _SEG_LINKS[sid]]
+    return links + _SCREEN_ONLY_LINKS.get(role, [])
 
 
 class NetworkMapPanel(tk.Frame):
@@ -135,21 +144,19 @@ class NetworkMapPanel(tk.Frame):
     def discover_node(self, role):
         """Barrido al descubrir: enciende el nodo y su camino, tenue."""
         self._set_node(role, fill="#1f5a26", outline=theme.GREEN)
-        for sid in seg.segments_for_role(role):
-            for link in _SEG_LINKS[sid]:
-                self._set_link(link, "#2a7a30", 3)
+        for link in _links_for_role(role):
+            self._set_link(link, "#2a7a30", 3)
 
     def focus_role(self, role, color=None):
         color = color or theme.GREEN
         self.reset()
-        for sid in seg.segments_for_role(role):
-            for link in _SEG_LINKS[sid]:
-                self._set_link(link, color, 4)
+        for link in _links_for_role(role):
+            self._set_link(link, color, 4)
         self._set_node(role, fill="#1f5a26", outline=color)
         self._set_node("terminal", outline=theme.GREEN)
 
     def pulse_role(self, role, times=8, color=theme.AMBER, interval=140):
-        links = [l for sid in seg.segments_for_role(role) for l in _SEG_LINKS[sid]]
+        links = _links_for_role(role)
 
         def step(i):
             on = i % 2 == 0

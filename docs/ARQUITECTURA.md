@@ -80,7 +80,7 @@ mapeo de ids.
 |---|---|
 | `IDLE` | shimmer de espera (todas las ramas) |
 | `OFF` | apaga todo |
-| `SEG:<id>:<anim>` | anima una rama (`id` 0..4) |
+| `SEG:<id>:<anim>` | anima una rama (`id` 0..3 = Tramos 1–4 del tablero) |
 | `ALL:<anim>` | anima todas |
 
 `<anim>` = `DISCOVER` (barrido), `FOCUS` (fijo), `EXPLOIT` (pulso ámbar), `TRANSFER` (chase cyan).
@@ -90,8 +90,9 @@ Animaciones **no bloqueantes** en el firmware (máquina de estados con `millis()
 
 - **Nuevo comando**: agregar patrón en `commands.py`, texto en `script.py`, handler en `flow.py`, y
   método en `NetworkBackend` (+ ambas implementaciones).
-- **Nuevo nodo/rama**: sumar `[[hosts]]` en `config.toml`, entrada en `segments.PATH_TO_ROLE`, y una
-  rama/pin en el firmware (`BRANCH_COUNTS`, `addLeds`).
+- **Nuevo nodo/rama**: sumar `[[hosts]]` en `config.toml`, entrada en `segments.PATH_TO_ROLE`, su
+  enlace en `netmap._SEG_LINKS`, y una rama/pin en el firmware (`NUM_BRANCHES`, `BRANCH_COUNTS`,
+  `BRANCH_REVERSED`, `addLeds`).
 - **Nueva vulnerabilidad**: módulo en `exploits/`, caso en `RealBackend.exploit` y en
   `SimulatedBackend.exploit`.
 
