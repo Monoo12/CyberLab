@@ -209,7 +209,7 @@
     <div class="grid">
       <div class="card"><h4>TERMINAL</h4><p class="big">PC del visitante</p><p class="sub">Corre la app (terminal + mapa + LEDs). El micro de los LEDs se enchufa acá por USB.</p></div>
       <div class="card"><h4>FILE-SERVER</h4><p class="big">El nodo vulnerable</p><p class="sub">Contenedor Docker (web + SSH). Es el único servidor "real" del modo Real.</p></div>
-      <div class="card"><h4>Tablero de LEDs</h4><p class="big">Tira WS2812B 5 m</p><p class="sub">Cortada en 4 tramos (144 LEDs), manejada por un ESP8266 por USB serial.</p></div>
+      <div class="card"><h4>Tablero de LEDs</h4><p class="big">Tira WS2812B 5 m</p><p class="sub">Una sola cadena de 144 LEDs (4 tramos) en un pin de un ESP8266, por USB serial.</p></div>
     </div>
 
     <figure>
@@ -313,12 +313,13 @@
 
   <section id="leds">
     <h2><span class="n">A</span> Armar los LEDs</h2>
-    <p>De la tira de 5 m se cortan 4 tramos, uno por cada canal del tablero (TERMINAL → switch-izq → router →
-      switch-der → FILE-SERVER), y cada tramo lleva su propia línea de datos a un pin del ESP8266. La fuente
-      alimenta todos los tramos; el micro solo comparte la tierra.</p>
+    <p>Los 4 tramos del tablero (TERMINAL → switch-izq → router → switch-der → FILE-SERVER) forman <strong>una sola
+      cadena de 144 LEDs</strong> con un único cable de datos al pin <code>D1</code> del ESP8266. Cada LED se controla
+      por separado igual: los tramos son rangos de LEDs dentro de la cadena. La fuente alimenta la tira; el micro
+      solo comparte la tierra.</p>
 
     <figure>
-      <svg viewBox="0 0 560 540" role="img" aria-label="Cadena de armado de los LEDs: la fuente de 5V 10A alimenta +5V y GND; el ESP8266 se alimenta por USB y comparte GND con la fuente; sus 4 datos a 3.3 voltios pasan por un level shifter que los sube a 5 voltios, uno por cada uno de los 4 tramos de la tira.">
+      <svg viewBox="0 0 560 540" role="img" aria-label="Cadena de armado de los LEDs: la fuente de 5V 10A alimenta +5V y GND; el ESP8266 se alimenta por USB y comparte GND con la fuente; su línea de datos a 3.3 voltios pasa por un level shifter que la sube a 5 voltios y entra a la cadena de 144 LEDs por el extremo de la TERMINAL.">
         <!-- rails -->
         <line x1="70" y1="54" x2="70" y2="492" class="ss-ac" stroke-width="2.5"/>
         <line x1="490" y1="54" x2="490" y2="452" stroke="currentColor" stroke-width="2" opacity="0.6"/>
@@ -337,7 +338,7 @@
         <text x="120" y="223" text-anchor="middle" font-family="var(--mono)" font-size="10" class="sf-ac">GND</text>
         <!-- arrow ESP -> shifter -->
         <line x1="280" y1="260" x2="280" y2="300" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar)"/>
-        <text x="292" y="284" font-family="var(--mono)" font-size="10.5" class="sf-mut">4 datos · 3.3V</text>
+        <text x="292" y="284" font-family="var(--mono)" font-size="10.5" class="sf-mut">DATA (D1) · 3.3V</text>
         <!-- shifter -->
         <rect x="150" y="300" width="260" height="58" rx="8" class="sf-box ss-ac" stroke-width="2"/>
         <text x="280" y="327" text-anchor="middle" font-family="var(--mono)" font-size="12.5" fill="currentColor">LEVEL SHIFTER 3.3V → 5V</text>
@@ -346,14 +347,14 @@
         <path d="M150 346 H70" class="ss-ac" stroke-width="2.5" fill="none"/>
         <!-- arrow shifter -> strip -->
         <line x1="280" y1="358" x2="280" y2="398" class="ss-ac" stroke-width="2.5" marker-end="url(#ar2)"/>
-        <text x="292" y="382" font-family="var(--mono)" font-size="10.5" class="sf-ac">4 datos · 5V</text>
+        <text x="292" y="382" font-family="var(--mono)" font-size="10.5" class="sf-ac">DATA · 5V</text>
         <!-- strip -->
         <rect x="140" y="398" width="280" height="72" rx="8" class="sf-box" stroke="currentColor"/>
-        <text x="280" y="427" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="currentColor">TIRA WS2812B · 4 tramos</text>
-        <text x="280" y="447" text-anchor="middle" font-family="var(--mono)" font-size="10" class="sf-mut">cada tramo: +5V · GND · DATA (una rama)</text>
+        <text x="280" y="427" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="currentColor">TIRA WS2812B · 144 LEDs</text>
+        <text x="280" y="447" text-anchor="middle" font-family="var(--mono)" font-size="10" class="sf-mut">T1→T2→T3→T4 · DATA del lado TERMINAL</text>
         <path d="M420 420 H490" stroke="currentColor" stroke-width="2" fill="none" opacity="0.6"/>
         <path d="M140 452 H70" class="ss-ac" stroke-width="2.5" fill="none"/>
-        <text x="280" y="500" text-anchor="middle" font-family="var(--mono)" font-size="10.5" class="sf-amb">inyectá +5V también al final de cada tramo largo</text>
+        <text x="280" y="500" text-anchor="middle" font-family="var(--mono)" font-size="10.5" class="sf-amb">inyectá +5V en los dos extremos de la cadena</text>
         <defs>
           <marker id="ar" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="currentColor"/></marker>
           <marker id="ar2" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" class="sf-ac"/></marker>
@@ -365,31 +366,34 @@
 
     <h3>A1 · Cortar y cablear</h3>
     <ol class="steps">
-      <li><span class="step-t">Cortá la tira en 4 tramos</span> de <strong>30, 46, 43 y 25 LEDs</strong> (ver la tabla de abajo).
-        Cortá por las líneas marcadas (cada 1 LED ≈ 1,67 cm). Fijate la <strong>flecha</strong> impresa: el dato entra por
-        el lado de la flecha.</li>
-      <li><span class="step-t">Uní 5V y GND de todos los tramos</span> a la fuente de 5V/10A. El <strong>GND del ESP8266
-        tiene que ir también al GND de la fuente</strong> (tierra común — es el error #1).</li>
-      <li><span class="step-t">Pasá cada línea de datos por el level shifter</span> (3.3→5V) antes de entrar al tramo.
+      <li><span class="step-t">Prepará la cadena de 144 LEDs</span> (30 + 46 + 43 + 25, ver la tabla de abajo). Si el canal
+        es continuo, alcanza con un solo pedazo; si cortás en tramos, cortá por las líneas marcadas (cada 1 LED ≈ 1,67 cm).</li>
+      <li><span class="step-t">Respetá la flecha</span>: todas apuntan hacia el FILE-SERVER y el <strong>DATA IN entra del lado
+        de la TERMINAL</strong>. En cada unión, el DATA OUT del último LED de un tramo va al DATA IN del primero del siguiente
+        (3 cables: 5V, GND, DATA).</li>
+      <li><span class="step-t">Uní 5V y GND</span> a la fuente de 5V/10A. El <strong>GND del ESP8266 tiene que ir también al
+        GND de la fuente</strong> (tierra común — es el error #1).</li>
+      <li><span class="step-t">Pasá la línea de datos por el level shifter</span> (3.3→5V) antes de entrar a la tira.
         El ESP saca 3.3V y el WS2812B necesita ~3.5V, así que sin shifter la señal falla.</li>
-      <li><span class="step-t">Inyectá 5V en ambos extremos</span> de los tramos largos (T2 y T3, ~75 cm): la tira pierde
+      <li><span class="step-t">Inyectá 5V en ambos extremos</span> de la cadena (~2,4 m) y, si podés, en el medio: la tira pierde
         tensión de punta a punta y los últimos LEDs se ven tenues o cambian de color.</li>
     </ol>
 
-    <h3>A2 · Tramos, largos y pines (ESP8266)</h3>
+    <h3>A2 · Tramos y números de LED</h3>
     <div class="tw">
       <table>
-        <thead><tr><th>Tramo</th><th>Rama (id)</th><th>Recorrido</th><th>Largo</th><th>LEDs</th><th>Pin ESP8266</th></tr></thead>
+        <thead><tr><th>Tramo</th><th>id</th><th>Recorrido</th><th>Largo</th><th>LEDs</th><th>Números</th></tr></thead>
         <tbody>
-          <tr><td>T1</td><td><code>0</code></td><td>TERMINAL ↔ switch-izq</td><td>50 cm</td><td>30</td><td><code>D1</code> (GPIO5)</td></tr>
-          <tr><td>T2</td><td><code>1</code></td><td>switch-izq ↔ router</td><td>77 cm</td><td>46</td><td><code>D2</code> (GPIO4)</td></tr>
-          <tr><td>T3</td><td><code>2</code></td><td>router ↔ switch-der</td><td>73 cm</td><td>43</td><td><code>D5</code> (GPIO14)</td></tr>
-          <tr><td>T4</td><td><code>3</code></td><td>switch-der ↔ FILE-SERVER</td><td>43 cm</td><td>25</td><td><code>D6</code> (GPIO12)</td></tr>
+          <tr><td>T1</td><td><code>0</code></td><td>TERMINAL ↔ switch-izq</td><td>50 cm</td><td>30</td><td>0–29</td></tr>
+          <tr><td>T2</td><td><code>1</code></td><td>switch-izq ↔ router</td><td>77 cm</td><td>46</td><td>30–75</td></tr>
+          <tr><td>T3</td><td><code>2</code></td><td>router ↔ switch-der</td><td>73 cm</td><td>43</td><td>76–118</td></tr>
+          <tr><td>T4</td><td><code>3</code></td><td>switch-der ↔ FILE-SERVER</td><td>43 cm</td><td>25</td><td>119–143</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="sub">Los LEDs son los que <strong>entran</strong> en cada largo medido (redondeado para abajo): 144 en total.
-      La rama (id) es el número que viaja por serial: <code>SEG:3:FOCUS</code> anima el T4.</p>
+    <p class="sub">Los LEDs son los que <strong>entran</strong> en cada largo medido (redondeado para abajo): 144 en total,
+      numerados desde la TERMINAL. El id viaja por serial: <code>SEG:3:FOCUS</code> anima el T4, y
+      <code>PIX:0-9,40-50:FOCUS</code> prende solo esos LEDs.</p>
 
     <h3>A3 · Cargar el firmware</h3>
     <ol class="steps">
@@ -397,21 +401,18 @@
         (Gestor de tarjetas) y la librería <strong>FastLED</strong> (Gestor de librerías).</li>
       <li><span class="step-t">Abrí</span> <code>firmware/cyberlab_leds/cyberlab_leds.ino</code> y elegí la placa
         <em>NodeMCU 1.0 (ESP-12E)</em> y el puerto.</li>
-      <li><span class="step-t">Ajustá los pines al ESP8266</span> (arriba del sketch):
-        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="k">#define</span> PIN_B0 D1   <span class="c">// GPIO5  — T1 (TERMINAL → switch-izq)</span>
-<span class="k">#define</span> PIN_B1 D2   <span class="c">// GPIO4  — T2 (switch-izq → router)</span>
-<span class="k">#define</span> PIN_B2 D5   <span class="c">// GPIO14 — T3 (router → switch-der)</span>
-<span class="k">#define</span> PIN_B3 D6   <span class="c">// GPIO12 — T4 (switch-der → FILE-SERVER)</span></pre></div>
+      <li><span class="step-t">El pin ya viene listo</span>: en ESP8266 el sketch usa el GPIO5, que es el pin
+        <code>D1</code> del NodeMCU. Cambialo solo si cableás otro.
+        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="k">#define</span> DATA_PIN 5   <span class="c">// GPIO5 = D1 del NodeMCU</span></pre></div>
       </li>
       <li><span class="step-t">Revisá los largos</span>: <code>BRANCH_COUNTS</code> ya trae los LEDs de cada tramo. Si al
-        cortar contaste otro número, poné el real. No toques <code>MAX_LEDS</code>: se calcula solo.
+        cortar contaste otro número, poné el real: los números de los tramos siguientes se corren solos.
         <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="c">// T1 50cm, T2 77cm, T3 73cm, T4 43cm a 60 LED/m</span>
-<span class="k">constexpr int</span> BRANCH_COUNTS[NUM_BRANCHES] = { 30, 46, 43, 25 };</pre></div>
+<span class="k">const int</span> BRANCH_COUNTS[NUM_BRANCHES] = { 30, 46, 43, 25 };</pre></div>
       </li>
-      <li><span class="step-t">Si un tramo anima al revés</span> (el barrido no va de la TERMINAL hacia el FILE-SERVER),
-        no recablees: poné <code>true</code> en su lugar de <code>BRANCH_REVERSED</code>.
-        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="c">// ej.: el T2 quedó con el DATA IN del lado del router</span>
-<span class="k">constexpr bool</span> BRANCH_REVERSED[NUM_BRANCHES] = { false, true, false, false };</pre></div>
+      <li><span class="step-t">Si toda la animación va al revés</span> (el barrido no va de la TERMINAL hacia el FILE-SERVER),
+        la cadena arranca del otro lado: no recablees, poné <code>STRIP_REVERSED</code> en <code>true</code>.
+        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="k">const bool</span> STRIP_REVERSED = <span class="k">true</span>;  <span class="c">// DATA IN del lado del FILE-SERVER</span></pre></div>
       </li>
       <li><span class="step-t">Subí el sketch.</span> El firmware ya limita el consumo a 9 A para la fuente de 10 A
         (no hay riesgo de brownout) y las animaciones son verde/ámbar/cyan a ~55% de brillo.</li>
@@ -423,10 +424,13 @@
 
     <h3>A4 · Probar los LEDs sin la app</h3>
     <div class="code"><div class="bar"><span class="t">terminal · led_test</span><button class="copy">copiar</button></div><pre>python tools/led_test.py --port COM3              <span class="c"># secuencia demo</span>
-python tools/led_test.py --port COM3 SEG:3:EXPLOIT <span class="c"># un comando puntual</span>
+python tools/led_test.py --port COM3 SEG:3:EXPLOIT <span class="c"># un tramo entero</span>
+python tools/led_test.py --port COM3 PIX:0-9,40-50:FOCUS <span class="c"># LEDs sueltos</span>
 python tools/led_test.py --port COM3 --interactive <span class="c"># tipear a mano</span></pre></div>
     <p class="sub">En Linux el puerto suele ser <code>/dev/ttyUSB0</code>. Deberías ver: barrido al <code>DISCOVER</code>,
-      fijo al <code>FOCUS</code>, pulso ámbar al <code>EXPLOIT</code>, chase cyan al <code>TRANSFER</code>.</p>
+      fijo al <code>FOCUS</code>, pulso ámbar al <code>EXPLOIT</code>, chase cyan al <code>TRANSFER</code>.
+      <code>PIX</code> prende solo esos rangos y apaga el resto; <code>ADD</code> los suma sin apagar nada
+      (ej. <code>ADD:40-50:OFF</code> apaga solo esos).</p>
   </section>
 
   <section id="red">
@@ -554,9 +558,10 @@ baud    = 115200</pre></div>
           <tr><td>LEDs titilan o no prenden</td><td>Falta <strong>tierra común</strong> entre fuente y micro. Unir GND.</td></tr>
           <tr><td>Colores random (ESP8266)</td><td>Datos a 3.3V bajo el umbral del WS2812B: poné el <strong>level shifter</strong>.</td></tr>
           <tr><td>Solo prende el principio</td><td>Tramo largo sin re-inyección: inyectá 5V también al final.</td></tr>
-          <tr><td>Un tramo muerto</td><td>Flecha de datos al revés, o pin equivocado en el sketch.</td></tr>
-          <tr><td>Un tramo anima al revés</td><td>DATA IN del otro lado: <code>true</code> en ese tramo de <code>BRANCH_REVERSED</code>.</td></tr>
-          <tr><td>Los últimos LEDs no prenden</td><td><code>BRANCH_COUNTS</code> menor que los LEDs reales del tramo: contalos y corregí.</td></tr>
+          <tr><td>Desde un punto no prende nada</td><td>Unión DATA OUT → DATA IN cortada o al revés ahí, o ese LED quemado.</td></tr>
+          <tr><td>No prende ningún LED</td><td>DATA IN del lado equivocado, pin equivocado en el sketch, o falta tierra común.</td></tr>
+          <tr><td>Todo anima al revés</td><td>La cadena arranca del lado del FILE-SERVER: <code>STRIP_REVERSED = true</code>.</td></tr>
+          <tr><td>Un tramo prende LEDs del siguiente</td><td><code>BRANCH_COUNTS</code> no coincide con lo cortado: contá los LEDs y corregí.</td></tr>
           <tr><td>El micro no aparece (puerto)</td><td>Cable USB solo-carga (usá uno de datos) o falta el driver CH340/CP210x.</td></tr>
           <tr><td><code>scan</code> sin hosts (real)</td><td>nmap sin Npcap/admin (Windows), red mal cableada o IPs fuera del CIDR.</td></tr>
           <tr><td><code>exploit</code> falla</td><td>La web del nodo no responde: <code>fileserver.sh status</code> / <code>logs</code>.</td></tr>

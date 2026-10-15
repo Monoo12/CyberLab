@@ -3,6 +3,7 @@
 Uso:
     python tools/led_test.py --port COM3            # secuencia demo
     python tools/led_test.py --port /dev/ttyUSB0 SEG:2:EXPLOIT
+    python tools/led_test.py --port COM3 PIX:0-9,40-50:FOCUS   # LEDs sueltos
     python tools/led_test.py --port COM3 --interactive   # tipear comandos a mano
 
 Sin --port intenta leer [serial].port de config.toml.
@@ -35,7 +36,8 @@ def _port_from_config() -> str | None:
 DEMO = [
     "OFF", "IDLE",
     "SEG:0:DISCOVER", "SEG:1:DISCOVER", "SEG:2:DISCOVER", "SEG:3:DISCOVER",
-    "SEG:3:FOCUS", "ALL:EXPLOIT", "ALL:TRANSFER", "OFF",
+    "SEG:3:FOCUS", "ALL:EXPLOIT", "ALL:TRANSFER",
+    "PIX:0-9,40-50:FOCUS", "ADD:119-143:EXPLOIT", "OFF",
 ]
 
 
@@ -62,7 +64,8 @@ def main():
     if args.cmd:
         send(args.cmd)
     elif args.interactive:
-        print("Escribi comandos (IDLE/OFF/SEG:id:ANIM/ALL:ANIM). Ctrl+C para salir.")
+        print("Escribi comandos (IDLE/OFF/SEG:id:ANIM/ALL:ANIM/PIX:0-9,40-50:ANIM/ADD:...). "
+              "Ctrl+C para salir.")
         try:
             while True:
                 send(input("led> ").strip())

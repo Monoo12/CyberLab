@@ -5,6 +5,9 @@ Protocolo de lineas (mismo que el firmware):
     OFF                 -> apaga todo
     SEG:<id>:<anim>     -> anima un segmento
     ALL:<anim>          -> anima todos los segmentos
+    PIX:<rangos>:<anim> -> anima LEDs sueltos (ej. 0-9,40-50) y apaga el resto
+    ADD:<rangos>:<anim> -> idem, sin apagar el resto
+(la app solo usa IDLE/OFF/SEG/ALL; PIX/ADD quedan para pruebas y efectos a mano)
 
 Degrada con elegancia: si no hay dispositivo (o pyserial no esta), NO rompe la app;
 loguea por consola las lineas que enviaria, util para verificar la sincronia sin hardware.

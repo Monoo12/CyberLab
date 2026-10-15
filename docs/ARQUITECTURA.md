@@ -78,10 +78,15 @@ mapeo de ids.
 
 | Comando | Efecto |
 |---|---|
-| `IDLE` | shimmer de espera (todas las ramas) |
+| `IDLE` | shimmer de espera (toda la tira) |
 | `OFF` | apaga todo |
-| `SEG:<id>:<anim>` | anima una rama (`id` 0..3 = Tramos 1–4 del tablero) |
-| `ALL:<anim>` | anima todas |
+| `SEG:<id>:<anim>` | anima un tramo (`id` 0..3 = Tramos 1–4 del tablero) |
+| `ALL:<anim>` | anima todos |
+| `PIX:<rangos>:<anim>` | anima LEDs sueltos (ej. `0-9,40-50`) y apaga el resto — pruebas/efectos |
+| `ADD:<rangos>:<anim>` | idem sin apagar el resto |
+
+Físicamente es **una sola tira encadenada** en un pin; cada tramo es un rango de LEDs (ver
+`docs/LEDS.md`).
 
 `<anim>` = `DISCOVER` (barrido), `FOCUS` (fijo), `EXPLOIT` (pulso ámbar), `TRANSFER` (chase cyan).
 Animaciones **no bloqueantes** en el firmware (máquina de estados con `millis()`).
@@ -90,9 +95,8 @@ Animaciones **no bloqueantes** en el firmware (máquina de estados con `millis()
 
 - **Nuevo comando**: agregar patrón en `commands.py`, texto en `script.py`, handler en `flow.py`, y
   método en `NetworkBackend` (+ ambas implementaciones).
-- **Nuevo nodo/rama**: sumar `[[hosts]]` en `config.toml`, entrada en `segments.PATH_TO_ROLE`, su
-  enlace en `netmap._SEG_LINKS`, y una rama/pin en el firmware (`NUM_BRANCHES`, `BRANCH_COUNTS`,
-  `BRANCH_REVERSED`, `addLeds`).
+- **Nuevo nodo/tramo**: sumar `[[hosts]]` en `config.toml`, entrada en `segments.PATH_TO_ROLE`, su
+  enlace en `netmap._SEG_LINKS`, y su largo en el firmware (`NUM_BRANCHES`, `BRANCH_COUNTS`).
 - **Nueva vulnerabilidad**: módulo en `exploits/`, caso en `RealBackend.exploit` y en
   `SimulatedBackend.exploit`.
 
