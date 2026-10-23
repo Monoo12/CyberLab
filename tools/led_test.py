@@ -36,8 +36,8 @@ def _port_from_config() -> str | None:
 DEMO = [
     "OFF", "IDLE",
     "SEG:0:DISCOVER", "SEG:1:DISCOVER", "SEG:2:DISCOVER", "SEG:3:DISCOVER",
-    "SEG:3:FOCUS", "ALL:EXPLOIT", "ALL:TRANSFER",
-    "PIX:0-9,40-50:FOCUS", "ADD:119-143:EXPLOIT", "OFF",
+    "SEG:3:FOCUS", "NODE:1:PROCESS", "ALL:EXPLOIT", "ALL:TRANSFER",
+    "PIX:0-12,35-53:FOCUS", "ADD:55-67:EXPLOIT", "OFF",
 ]
 
 
@@ -54,8 +54,15 @@ def main():
         print("Especifica --port (ej. COM3 o /dev/ttyUSB0)")
         sys.exit(1)
 
-    ser = serial.Serial(port, args.baud, timeout=0.3)
-    time.sleep(2)  # reset del micro al abrir el puerto
+    # Abrir sin activar DTR/RTS: en el NodeMCU esas lineas van a RST y GPIO0.
+    ser = serial.Serial()
+    ser.port = port
+    ser.baudrate = args.baud
+    ser.timeout = 0.3
+    ser.dtr = False
+    ser.rts = False
+    ser.open()
+    time.sleep(0.5)
 
     def send(line):
         print(">>", line)

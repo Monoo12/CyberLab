@@ -6,23 +6,37 @@ de `app/leds/segments.py` y de la orquestación en `app/mission/flow.py`.
 
 ## 1. Tramos / segmentos físicos
 
-El tablero es **una sola tira de 144 LEDs encadenada** en "U" invertida (TERMINAL → switch-izq → router →
+El tablero es **una sola tira de 68 LEDs encadenada** en "U" invertida (TERMINAL → switch-izq → router →
 switch-der → FILE-SERVER), en un único pin del micro (`D1` en el NodeMCU). Cada tramo es un **rango de
-LEDs** de esa tira, contando desde 0 en el extremo de la TERMINAL. El id de segmento es lo que viaja por
-serial (`SEG:<id>:<anim>`); en el tablero se los llama Tramo 1 a 4.
+LEDs** de esa tira y entre tramo y tramo hay **un LED de nodo** (el switch o el router). El id de
+segmento es lo que viaja por serial (`SEG:<id>:<anim>`); en el tablero se los llama Tramo 1 a 4.
 
-| Segmento (id) | Tramo | Recorrido físico | Largo | LEDs | Números de LED |
-|:---:|:---:|---|:---:|:---:|:---:|
-| **0** | Tramo 1 | **TERMINAL** ↔ switch-izq | 50 cm | 30 | 0–29 |
-| **1** | Tramo 2 | switch-izq ↔ router | 77 cm | 46 | 30–75 |
-| **2** | Tramo 3 | router ↔ switch-der | 73 cm | 43 | 76–118 |
-| **3** | Tramo 4 | switch-der ↔ **FILE-SERVER** | 43 cm | 25 | 119–143 |
+Los números de LED van **desde 0** en el extremo de la TERMINAL (así los usan `PIX`/`ADD`); entre
+paréntesis, la cuenta a mano desde 1.
 
-> Tira WS2812B 5V de 60 LED/m (1 LED cada ~1,67 cm). Los LEDs son los que **entran** en cada tramo
-> medido (redondeado para abajo, cortando por las marcas): **144 en total, ~2,4 m** de los 5 m. Si al
-> cortar contás otro número, poné el real en `BRANCH_COUNTS`: los rangos se recalculan solos.
-> Las animaciones corren en el sentido TERMINAL → FILE-SERVER; si la cadena arranca del lado del
-> FILE-SERVER, poné `STRIP_REVERSED = true` (no hace falta recablear).
+| Zona | Recorrido físico | LEDs | Números de LED |
+|---|---|:---:|:---:|
+| **Segmento 0** · Tramo 1 | **TERMINAL** → switch-izq | 13 | 0–12 (1–13) |
+| Nodo 0 · switch-izq | titila "procesando" | 1 | 13 (14) |
+| **Segmento 1** · Tramo 2 | switch-izq → router | 20 | 14–33 (15–34) |
+| Nodo 1 · router | titila "procesando" | 1 | 34 (35) |
+| **Segmento 2** · Tramo 3 | router → switch-der | 19 | 35–53 (36–54) |
+| Nodo 2 · switch-der | titila "procesando" | 1 | 54 (55) |
+| **Segmento 3** · Tramo 4 | switch-der → **FILE-SERVER** | 13 | 55–67 (56–68) |
+
+> **El LED 62 (63 contando a mano) está dañado y no se prende nunca**, con ningún comando: el firmware
+> lo fuerza a negro en cada frame (`DEAD_LEDS`).
+>
+> Los largos de los tramos están en `BRANCH_COUNTS` (sin contar los nodos); el inicio de cada tramo y
+> nodo se recalcula solo. Las animaciones corren en el sentido TERMINAL → FILE-SERVER; si la cadena
+> arranca del lado del FILE-SERVER, poné `STRIP_REVERSED = true` (no hace falta recablear).
+
+### Nodos (switch / router)
+
+Cada vez que un `SEG:<id>:<anim>` enciende un tramo, el **nodo del final de ese tramo titila en blanco
+~2,5 s** (simula que el switch o el router procesa el paquete) y después queda igual que el tramo. El
+tramo 4 llega al FILE-SERVER y no tiene nodo. Con `OFF`/`IDLE` los nodos siguen a la tira sin titilar.
+La app no manda nada extra para esto: alcanza con los `SEG` de siempre.
 
 ## 2. Ruta de LEDs por dispositivo (desde la terminal)
 
@@ -49,22 +63,24 @@ llegan hasta el switch-der y el último salto se ve solo en el mapa de la pantal
 | `FOCUS` | Tramo en foco (objetivo actual) | verde fijo medio |
 | `EXPLOIT` | Ataque en curso | pulso rápido ámbar/intenso |
 | `TRANSFER` | Transferencia de datos (flag/archivo) | chase rápido cyan |
+| `PROCESS` | Un nodo procesa (switch/router) | titila blanco ~2,5 s y vuelve a como estaba |
 
 ## 4. Protocolo serial (una línea por comando, `\n`, 115200 baud)
 
 ```
 IDLE                 -> toda la tira en espera
 OFF                  -> apaga todo
-SEG:<id>:<anim>      -> anima un tramo (id 0..3)
-ALL:<anim>           -> anima todos los tramos
-PIX:<rangos>:<anim>  -> anima solo esos LEDs y apaga el resto   (ej. PIX:0-9,40-50:FOCUS)
-ADD:<rangos>:<anim>  -> anima esos LEDs sin tocar el resto       (ej. ADD:119-143:EXPLOIT)
+SEG:<id>:<anim>      -> anima un tramo (id 0..3); su nodo del final titila y lo sigue
+ALL:<anim>           -> anima todos los tramos (con sus nodos)
+NODE:<id>:<anim>     -> anima solo un nodo (0 switch-izq, 1 router, 2 switch-der)  (ej. NODE:1:PROCESS)
+PIX:<rangos>:<anim>  -> anima solo esos LEDs y apaga el resto   (ej. PIX:0-12,35-53:FOCUS)
+ADD:<rangos>:<anim>  -> anima esos LEDs sin tocar el resto       (ej. ADD:55-67:EXPLOIT)
 ```
 
 `<rangos>`: LEDs sueltos o rangos inclusivos separados por coma, contando desde 0 en el lado de la
 TERMINAL (hasta 8 rangos). En `PIX`/`ADD` también vale `<anim>` = `OFF` o `IDLE` (ej. `ADD:40-50:OFF`
-apaga solo esos). Cualquier `SEG`/`ALL`/`IDLE`/`OFF` vuelve al modo tramos y borra los rangos. La app
-usa solo `IDLE/OFF/SEG/ALL`; `PIX`/`ADD` son para pruebas y efectos a mano.
+apaga solo esos). Cualquier `SEG`/`ALL`/`NODE`/`IDLE`/`OFF` vuelve al modo tramos y borra los rangos. La
+app usa `IDLE/OFF/SEG/ALL`; `NODE`/`PIX`/`ADD` son para pruebas y efectos a mano.
 
 ## 5. Cue sheet — qué dispara cada comando/evento
 
@@ -124,4 +140,16 @@ ALL:TRANSFER                 (Mission Complete)
 - El consumo lo limita FastLED a 9 A para la fuente de 5V/10A (`setMaxPowerInVoltsAndMilliamps`): no
   toques eso salvo que cambies la fuente.
 - Para probar sin la app: `python tools/led_test.py --port COM3 SEG:3:EXPLOIT` o
-  `... "PIX:0-9,40-50:FOCUS"` (ver `docs/GUIA-HARDWARE.md`).
+  `... "PIX:0-12,35-53:FOCUS"` (ver `docs/GUIA-HARDWARE.md`).
+- Para revisar el tablero entero (tramos, nodos y LED dañado) en un solo paso:
+  `python tools/tablero_test.py` (ver la sección 7).
+
+## 7. Prueba del tablero completo
+
+`tools/tablero_test.py` manda los comandos con el mismo `LedController` que usa la app, así que también
+prueba la conexión real. Fases (se puede correr una sola con `--fase N`):
+
+1. **Tramos uno por uno**: cada tramo se prende verde y el nodo de su final titila blanco y queda verde.
+2. **Nodos solos**: los LEDs 14, 35 y 55 (a mano) titilan de a uno y se apagan.
+3. **LED dañado**: toda la tira verde menos el 63; después solo del 61 al 65, con el 63 apagado en el medio.
+4. **Ruta completa** (como un `traceroute` al FILE-SERVER): tramo, nodo procesando, tramo, y así hasta el final.
