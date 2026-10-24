@@ -32,13 +32,15 @@ DONE = "done"
 
 class MissionController:
     def __init__(self, root, cfg, backend, terminal, netmap, leds,
-                 show_waiting, show_mission, on_return_menu=None, on_timer=None):
+                 show_waiting, show_mission, on_return_menu=None, on_timer=None,
+                 suspense=None):
         self.root = root
         self.cfg = cfg
         self.backend = backend
         self.term = terminal
         self.netmap = netmap
         self.leds = leds
+        self.suspense = suspense     # overlay cinematografico (modos accesibles)
         self.show_waiting = show_waiting
         self.show_mission = show_mission
         self.on_return_menu = on_return_menu
@@ -72,6 +74,8 @@ class MissionController:
     def enter_waiting(self):
         self.state = WAITING
         self._cancel_timers()
+        if self.suspense:
+            self.suspense.stop()
         try:
             self.backend.close_browser()
         except Exception:
@@ -135,6 +139,8 @@ class MissionController:
         """Detiene el controller (pump/timers) al volver al menu o cerrar."""
         self._alive = False
         self._cancel_timers()
+        if self.suspense:
+            self.suspense.stop()
         try:
             self.backend.close_browser()
         except Exception:
@@ -331,6 +337,10 @@ class MissionController:
         self.state = CONNECTED
 
     # ================= exploit =================
+    def _accessible(self):
+        """Modos para quien no sabe: no se puede fallar, con show de suspenso."""
+        return self.mode in ("guiado", "tarjetas")
+
     def _cmd_exploit(self, ip, method):
         if not self.free and not self.hosts:
             self.term.writeln("[!] Primero descubri la red (scan).", tag="amber")
@@ -342,10 +352,22 @@ class MissionController:
         method = method or "hydra"
         host = self.cfg.host_by_ip(ip)
         role = host.role if host else "unknown"
+        self.target_ip = ip
+
+        # Modos accesibles: el "golpe 2" es el show de suspenso que termina en exito.
+        if self._accessible() and self.suspense is not None:
+            if self.netmap and role != "unknown":
+                self.netmap.pulse_role(role, times=10, color=theme.AMBER)
+            self._busy(True)
+            self.suspense.play(
+                role, self.lesson,
+                on_done=lambda: self._async(lambda: self.backend.exploit(ip, method),
+                                            self._exploit_done))
+            return
+
         if self.netmap and role != "unknown":
             self.netmap.pulse_role(role, times=10, color=theme.AMBER)
         self.leds.animate_segments(seg.segments_for_role(role), seg.ANIM_EXPLOIT)
-        self.target_ip = ip
         self._busy(True)
         self.term.type_lines([
             script.RUN_EXPLOIT.format(method=method, ip=ip),

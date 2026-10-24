@@ -14,6 +14,7 @@ from app.ui import theme
 from app.ui.matrix import MatrixRain
 from app.ui.netmap import NetworkMapPanel
 from app.ui.setup_menu import SetupMenu
+from app.ui.suspense import SuspenseOverlay
 from app.ui.terminal import TerminalPanel
 
 
@@ -119,6 +120,9 @@ class MissionApp:
         else:
             self.terminal.pack(fill="both", expand=True)
 
+        # Overlay de suspenso (modos accesibles): cubre la vista de mision cuando juega
+        self.suspense = SuspenseOverlay(self.mission_frame, self.mono, self.leds)
+
         # Vista de espera (matrix)
         self.matrix = MatrixRain(self._container, self.mono, on_key=self._on_matrix_key)
 
@@ -126,6 +130,7 @@ class MissionApp:
             self.root, self.cfg, self.backend, self.terminal, self.netmap, self.leds,
             show_waiting=self._show_waiting, show_mission=self._show_mission,
             on_return_menu=self.return_to_setup, on_timer=self._on_timer,
+            suspense=self.suspense,
         )
         self.controller.enter_waiting()
 
