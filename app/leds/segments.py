@@ -47,6 +47,11 @@ ANIM_FOCUS = "FOCUS"        # resaltado fijo del tramo en foco
 ANIM_EXPLOIT = "EXPLOIT"    # pulso intenso/rapido
 ANIM_TRANSFER = "TRANSFER"  # parpadeo rapido (transferencia de datos)
 ANIM_PROCESS = "PROCESS"    # titila unos segundos (nodo procesando) y vuelve
+# Transitorias: animan un rato y vuelven solas al estado previo de la zona.
+ANIM_PING = "PING"          # eco que va y vuelve (ping)
+ANIM_SCAN = "SCAN"          # escaneo de puertos (flicker) -- telnet / knock
+ANIM_BLIP = "BLIP"          # ack rapido de cualquier comando (reacciona a todo)
+ANIM_ERROR = "ERROR"        # flash rojo de error (comando invalido / fallo)
 
 
 def segments_for_role(role: str) -> list[int]:

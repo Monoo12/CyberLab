@@ -164,12 +164,14 @@ class MissionController:
             self.term.writeln("[!] " + pc.error, tag="red")
             if self.difficulty != "dificil":
                 self.term.writeln("    escribi 'help' para ver los comandos.", tag="dim")
+            self.leds.animate_all(seg.ANIM_ERROR)   # flash rojo: algo salio mal
             return
 
         # gating por dificultad: los comandos extra no estan en nivel Facil
         if pc.name in EXTRA_COMMANDS and pc.name not in self.available:
             self.term.writeln("[!] '" + pc.name + "' no esta disponible en nivel Facil.", tag="amber")
             self.term.writeln("    subi a Medio/Dificil/Pro o activa Modo Libre.", tag="dim")
+            self.leds.animate_all(seg.ANIM_ERROR)
             return
 
         handlers = {
@@ -196,6 +198,10 @@ class MissionController:
         h = handlers.get(pc.name)
         if h:
             h()
+        # Ack minimo en el tablero para los comandos locales (sin red): un blip en
+        # el primer nodo, asi CUALQUIER comando mueve algo en los LEDs.
+        if pc.name in ("help", "hint", "clear", "pwd", "whoami"):
+            self.leds.animate_node(0, seg.ANIM_BLIP)
 
     # ================= comandos informativos =================
     def _cmd_help(self):
@@ -374,7 +380,8 @@ class MissionController:
         if host and self.netmap:
             self.netmap.focus_role(host.role)
         if host:
-            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_FOCUS)
+            # eco que viaja hasta el host y vuelve por cada tramo del camino
+            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_PING)
         self._busy(True)
         self._async(lambda: self.backend.ping(ip), self._ping_done)
 
@@ -388,7 +395,8 @@ class MissionController:
         if host and self.netmap:
             self.netmap.focus_role(host.role)
         if host:
-            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_FOCUS)
+            # "golpear la puerta": escaneo/flicker sobre el camino al host
+            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_SCAN)
         self._busy(True)
         self._async(lambda: self.backend.telnet(ip, port), self._recon_done)
 
@@ -414,12 +422,17 @@ class MissionController:
 
     def _cmd_arp(self):
         ips = [h.ip for h in self.hosts] or [h.ip for h in self.cfg.hosts]
+        # "quien es quien en la red": titilan los nodos (switches + router)
+        for node_id in seg.NODE_LEDS:
+            self.leds.animate_node(node_id, seg.ANIM_PROCESS)
         self._busy(True)
         self._async(lambda: self.backend.arp(ips), self._recon_done)
 
     def _cmd_netstat(self):
         ip = self.session_ip or (self.cfg.host_by_role("terminal").ip
                                  if self.cfg.host_by_role("terminal") else "127.0.0.1")
+        # tus propias conexiones: pulso en tu tramo (el de la terminal, seg 0)
+        self.leds.animate_segment(0, seg.ANIM_PING)
         self._busy(True)
         self._async(lambda: self.backend.netstat(ip), self._recon_done)
 
@@ -454,15 +467,26 @@ class MissionController:
         if ok:
             self.cwd = target
             self.term.writeln("  -> " + target, tag="dim")
+            segs = self._session_segments()
+            if segs:
+                self.leds.animate_segment(segs[-1], seg.ANIM_BLIP)  # blip al cambiar de carpeta
         else:
             self.term.writeln("[!] No existe el directorio: " + target, tag="amber")
+            self.leds.animate_all(seg.ANIM_ERROR)
         self._busy(False)
+
+    def _session_segments(self):
+        """Tramos LED hacia el host donde tenes shell (para feedback de ls/cd)."""
+        host = self.cfg.host_by_ip(self.session_ip) if self.session_ip else None
+        return seg.segments_for_role(host.role) if host else []
 
     def _cmd_ls(self, path):
         if not self.session_ip:
             self._no_access()
             return
         target = self._resolve(path)
+        # leyendo el directorio: shimmer corto sobre el tramo del servidor
+        self.leds.animate_segments(self._session_segments(), seg.ANIM_BLIP)
         self._busy(True)
         self._async(lambda: self.backend.ls(self.session_ip, target), self._ls_done)
 
