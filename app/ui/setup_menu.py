@@ -19,10 +19,12 @@ _VISUAL_LABELS_INV = {True: "Encendido", False: "Apagado"}
 
 
 class SetupMenu(ctk.CTkFrame):
-    def __init__(self, parent, cfg, on_start):
+    def __init__(self, parent, cfg, on_start, leds=None):
         super().__init__(parent, fg_color=theme.BG)
         self.cfg = cfg
         self.on_start = on_start
+        self.leds = leds
+        self._leds_on = True  # al entrar al menu la tira esta en IDLE
 
         wrap = ctk.CTkFrame(self, fg_color=theme.BG_PANEL, corner_radius=16,
                             border_color=theme.GREEN, border_width=2)
@@ -86,11 +88,36 @@ class SetupMenu(ctk.CTkFrame):
         self.free_seg.set("Libre" if cfg.modes.free_mode else "Mision")
         add(self.free_seg, pady=(0, 12))
 
+        # --- Tira de LEDs (solo si hay controlador habilitado) ---
+        if self.leds is not None and getattr(self.leds, "enabled", False):
+            self.leds_btn = ctk.CTkButton(
+                wrap, text="APAGAR LEDS", fg_color=theme.BG_PANEL, hover_color="#222",
+                text_color=theme.DIM, border_color=theme.DIM, border_width=1,
+                font=("Consolas", 14), height=38, command=self._toggle_leds)
+            add(self.leds_btn, pady=(2, 10))
+
         # --- Start ---
         start = ctk.CTkButton(wrap, text="COMENZAR", fg_color=theme.GREEN, hover_color="#2ecc12",
                               text_color="#04140a", font=("Consolas", 20, "bold"), height=52,
                               command=self._start)
         add(start, pady=(14, 30))
+
+    def _toggle_leds(self):
+        if self.leds is None:
+            return
+        try:
+            if self._leds_on:
+                self.leds.off()
+                self._leds_on = False
+                self.leds_btn.configure(text="ENCENDER LEDS", text_color=theme.GREEN,
+                                        border_color=theme.GREEN)
+            else:
+                self.leds.idle()
+                self._leds_on = True
+                self.leds_btn.configure(text="APAGAR LEDS", text_color=theme.DIM,
+                                        border_color=theme.DIM)
+        except Exception:
+            pass
 
     def _start(self):
         self.cfg.modes.visual = _VISUAL_LABELS.get(self.visual_seg.get(), True)

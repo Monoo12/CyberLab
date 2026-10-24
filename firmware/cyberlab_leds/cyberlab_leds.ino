@@ -115,6 +115,8 @@ const CRGB C_DIMG  = CRGB(6, 40, 8);
 const CRGB C_AMBER = CRGB(255, 150, 0);
 const CRGB C_CYAN  = CRGB(40, 220, 220);
 const CRGB C_WHITE = CRGB(255, 255, 255);
+const CRGB C_RED   = CRGB(255, 20, 10);
+const CRGB C_REDHOT = CRGB(255, 70, 30);
 
 String rx;  // buffer de linea
 
@@ -188,18 +190,35 @@ void renderZone(Zone& z) {
       break;
 
     case A_IDLE: {
-      // respiracion lenta verde muy tenue
-      uint8_t w = quadwave8((el / 12) & 0xFF);      // 0..255
-      CRGB c = blend(CRGB::Black, C_DIMG, w);
-      fill_solid(px, n, c);
+      // Espera con vida: respiracion verde muy tenue + un cometa que recorre TODO
+      // el tablero (usa la posicion absoluta z.start+i y un reloj global, asi los
+      // tramos y nodos se encadenan en un unico barrido continuo que se repite).
+      uint32_t now = millis();
+      uint8_t br = quadwave8((now / 16) & 0xFF);          // respiracion lenta
+      CRGB base = blend(CRGB::Black, C_DIMG, br);
+      int span = (numLeds > 0) ? numLeds : 1;
+      int head = (now / 55) % span;                        // cabeza del cometa 0..span
+      for (int i = 0; i < n; i++) {
+        int d = head - (z.start + i);
+        if (d < 0) d += span;                              // distancia por detras de la cabeza
+        px[i] = (d < 10) ? blend(base, C_GREEN, (uint8_t)(255 - d * 26)) : base;
+      }
       break;
     }
 
     case A_DISCOVER: {
-      // barrido de encendido (~600ms) y luego queda tenue
-      int lit = (el >= 600) ? n : (int)((el * n) / 600);
-      for (int i = 0; i < n; i++) px[i] = (i < lit) ? C_GREEN : CRGB::Black;
-      if (el >= 900) setAnim(z, A_FOCUS);
+      // Barrido de descubrimiento REPETIDO: la cabeza verde recorre el tramo
+      // varias pasadas (dejando una estela tenue) y recien despues queda en FOCUS.
+      const uint32_t PASS = 520;    // ms por pasada
+      const int PASSES = 3;         // cuantas veces se repite el barrido
+      if (el >= PASS * PASSES) { setAnim(z, A_FOCUS); break; }
+      int head = (int)(((el % PASS) * n) / PASS);
+      for (int i = 0; i < n; i++) {
+        int d = head - i;
+        if (d == 0 || d == 1) px[i] = C_GREEN;             // cabeza brillante
+        else if (d > 0)       px[i] = CRGB(12, 70, 18);    // estela ya recorrida
+        else                  px[i] = CRGB::Black;         // todavia sin tocar
+      }
       break;
     }
 
@@ -208,10 +227,15 @@ void renderZone(Zone& z) {
       break;
 
     case A_EXPLOIT: {
-      // pulso rapido ambar (recorrido "intenso")
+      // Ataque: ROJO agresivo. Strobe rapido de fondo + un punto caliente que
+      // corre por el tramo (sensacion de intrusion).
       uint8_t w = triwave8((el / 3) & 0xFF);
-      CRGB c = blend(CRGB(60, 20, 0), C_AMBER, w);
-      fill_solid(px, n, c);
+      fill_solid(px, n, blend(CRGB(30, 0, 0), C_RED, w));
+      int head = (el / 22) % (n > 0 ? n : 1);
+      for (int k = 0; k < 3; k++) {
+        int j = head - k;
+        if (j >= 0 && j < n) px[j] = C_REDHOT;
+      }
       break;
     }
 

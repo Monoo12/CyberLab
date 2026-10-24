@@ -1,5 +1,5 @@
 # App del visitante (runtime)
-customtkinter>=5.2.0
+customtkinter>=5.2.0,<6   # la 6.x rompe el dibujado (ventana negra); el UI usa la API 5.x
 paramiko>=3.4.0
 requests>=2.31.0
 pyserial>=3.5

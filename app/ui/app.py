@@ -53,7 +53,8 @@ class MissionApp:
 
     # ------------------------------------------------------------------
     def _show_setup(self):
-        self.setup = SetupMenu(self._container, self.cfg, on_start=self._on_setup_done)
+        self.setup = SetupMenu(self._container, self.cfg, on_start=self._on_setup_done,
+                               leds=self.leds)
         self.setup.pack(fill="both", expand=True)
 
     def _on_setup_done(self):
