@@ -10,10 +10,12 @@ import customtkinter as ctk
 from app.backend.simulated import SimulatedBackend
 from app.leds.controller import LedController
 from app.mission.flow import MissionController
+from app.mission.reto_flow import RetoController
 from app.mission.tarjetas_flow import TarjetasController
 from app.ui import theme
 from app.ui.matrix import MatrixRain
 from app.ui.netmap import NetworkMapPanel
+from app.ui.reto import RetoView
 from app.ui.setup_menu import SetupMenu
 from app.ui.suspense import SuspenseOverlay
 from app.ui.tarjetas import TarjetasView
@@ -37,6 +39,9 @@ class MissionApp:
         self.root.geometry("1200x760")
         self.root.bind("<F11>", self._toggle_fullscreen)
         self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
+        # Atajo del operador: volver al menu de setup desde cualquier modo (util en
+        # tarjetas/reto, que no tienen comando 'menu').
+        self.root.bind("<Control-m>", lambda e: self.return_to_setup())
         self._fullscreen = False
 
         self.mono = theme.pick_mono(self.root)
@@ -65,9 +70,10 @@ class MissionApp:
         self._build_mission()
 
     def return_to_setup(self):
-        """Vuelve al menu de configuracion (comando 'menu' o [M] al terminar)."""
-        if self.controller:
-            self.controller.shutdown()
+        """Vuelve al menu de configuracion (comando 'menu', [M] al terminar, o Ctrl+M)."""
+        if self.controller is None:
+            return   # ya estamos en el menu (p.ej. Ctrl+M en setup): no hacer nada
+        self.controller.shutdown()
         try:
             self.matrix.unbind_keys(self.root)
             self.matrix.stop()
@@ -112,13 +118,17 @@ class MissionApp:
         body = ctk.CTkFrame(self.mission_frame, fg_color=theme.BG)
         body.pack(fill="both", expand=True)
 
-        # Modo TARJETAS -> vista de botones grandes (sin teclado); resto -> terminal.
-        is_cards = self.cfg.modes.mode == "tarjetas"
+        # Vista principal segun el modo: tarjetas / reto (sin teclado) o terminal.
+        mode = self.cfg.modes.mode
         self.terminal = None
         self.cards = None
-        if is_cards:
+        self.reto = None
+        if mode == "tarjetas":
             self.cards = TarjetasView(body, self.mono)
             self.cards.pack(side="left", fill="both", expand=True)
+        elif mode == "reto":
+            self.reto = RetoView(body, self.mono)
+            self.reto.pack(side="left", fill="both", expand=True)
         else:
             self.terminal = TerminalPanel(body, self.mono, cps=self.cfg.timing.typewriter_cps)
             self.terminal.pack(side="left", fill="both", expand=True)
@@ -134,9 +144,16 @@ class MissionApp:
         # Vista de espera (matrix)
         self.matrix = MatrixRain(self._container, self.mono, on_key=self._on_matrix_key)
 
-        if is_cards:
+        if mode == "tarjetas":
             self.controller = TarjetasController(
                 self.root, self.cfg, self.backend, self.cards, self.netmap, self.leds,
+                show_waiting=self._show_waiting, show_mission=self._show_mission,
+                on_return_menu=self.return_to_setup, on_timer=self._on_timer,
+                suspense=self.suspense,
+            )
+        elif mode == "reto":
+            self.controller = RetoController(
+                self.root, self.cfg, self.backend, self.reto, self.netmap, self.leds,
                 show_waiting=self._show_waiting, show_mission=self._show_mission,
                 on_return_menu=self.return_to_setup, on_timer=self._on_timer,
                 suspense=self.suspense,
