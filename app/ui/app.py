@@ -10,11 +10,13 @@ import customtkinter as ctk
 from app.backend.simulated import SimulatedBackend
 from app.leds.controller import LedController
 from app.mission.flow import MissionController
+from app.mission.tarjetas_flow import TarjetasController
 from app.ui import theme
 from app.ui.matrix import MatrixRain
 from app.ui.netmap import NetworkMapPanel
 from app.ui.setup_menu import SetupMenu
 from app.ui.suspense import SuspenseOverlay
+from app.ui.tarjetas import TarjetasView
 from app.ui.terminal import TerminalPanel
 
 
@@ -110,15 +112,21 @@ class MissionApp:
         body = ctk.CTkFrame(self.mission_frame, fg_color=theme.BG)
         body.pack(fill="both", expand=True)
 
-        self.terminal = TerminalPanel(body, self.mono, cps=self.cfg.timing.typewriter_cps)
-        if self.cfg.modes.visual:
+        # Modo TARJETAS -> vista de botones grandes (sin teclado); resto -> terminal.
+        is_cards = self.cfg.modes.mode == "tarjetas"
+        self.terminal = None
+        self.cards = None
+        if is_cards:
+            self.cards = TarjetasView(body, self.mono)
+            self.cards.pack(side="left", fill="both", expand=True)
+        else:
+            self.terminal = TerminalPanel(body, self.mono, cps=self.cfg.timing.typewriter_cps)
             self.terminal.pack(side="left", fill="both", expand=True)
+        if self.cfg.modes.visual:
             self.netmap = NetworkMapPanel(body, self.cfg, self.mono)
             self.netmap.configure(width=460)
             self.netmap.pack(side="right", fill="both", expand=False)
             self.netmap.pack_propagate(False)
-        else:
-            self.terminal.pack(fill="both", expand=True)
 
         # Overlay de suspenso (modos accesibles): cubre la vista de mision cuando juega
         self.suspense = SuspenseOverlay(self.mission_frame, self.mono, self.leds)
@@ -126,12 +134,20 @@ class MissionApp:
         # Vista de espera (matrix)
         self.matrix = MatrixRain(self._container, self.mono, on_key=self._on_matrix_key)
 
-        self.controller = MissionController(
-            self.root, self.cfg, self.backend, self.terminal, self.netmap, self.leds,
-            show_waiting=self._show_waiting, show_mission=self._show_mission,
-            on_return_menu=self.return_to_setup, on_timer=self._on_timer,
-            suspense=self.suspense,
-        )
+        if is_cards:
+            self.controller = TarjetasController(
+                self.root, self.cfg, self.backend, self.cards, self.netmap, self.leds,
+                show_waiting=self._show_waiting, show_mission=self._show_mission,
+                on_return_menu=self.return_to_setup, on_timer=self._on_timer,
+                suspense=self.suspense,
+            )
+        else:
+            self.controller = MissionController(
+                self.root, self.cfg, self.backend, self.terminal, self.netmap, self.leds,
+                show_waiting=self._show_waiting, show_mission=self._show_mission,
+                on_return_menu=self.return_to_setup, on_timer=self._on_timer,
+                suspense=self.suspense,
+            )
         self.controller.enter_waiting()
 
     # ------------------------------------------------------------------
@@ -146,14 +162,16 @@ class MissionApp:
         self.matrix.stop()
         self.matrix.pack_forget()
         self.mission_frame.pack(fill="both", expand=True)
-        self.terminal.focus_input()
+        if self.terminal is not None:
+            self.terminal.focus_input()
 
     def _on_matrix_key(self):
         self.controller.on_any_key()
 
     def _on_timer(self, remaining):
-        if remaining is None:   # modo libre: tiempo infinito
-            self.timer_label.configure(text="MODO LIBRE", text_color=theme.CYAN)
+        if remaining is None:   # modo libre o tarjetas: sin cuenta regresiva
+            txt = "MODO TARJETAS" if self.cfg.modes.mode == "tarjetas" else "MODO LIBRE"
+            self.timer_label.configure(text=txt, text_color=theme.CYAN)
             return
         m, s = divmod(max(0, remaining), 60)
         self.timer_label.configure(text="TIEMPO %02d:%02d" % (m, s))

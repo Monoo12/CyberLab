@@ -131,6 +131,21 @@ def narrate_guiado(step: str, lesson: str = "clave") -> list[str]:
     return list(_GUIADO_STEPS.get(step, []))
 
 
+# Enseñanza concisa para la pantalla final del modo TARJETAS (una frase).
+TARJETAS_TAKEAWAY = {
+    "clave": "Lo que pasa de verdad: una clave facil (1234, admin) se adivina en "
+             "segundos. Usa contrasenas largas y distintas en cada sitio.",
+    "expuesto": "Lo que pasa de verdad: la clave estaba a la vista, escondida en el "
+                "codigo de la pagina. No publiques datos sensibles online.",
+    "login": "Lo que pasa de verdad: un truco en el formulario abrio la puerta sin la "
+             "clave. Por eso los sistemas hay que programarlos con cuidado.",
+}
+
+
+def tarjetas_takeaway(lesson: str) -> str:
+    return TARJETAS_TAKEAWAY.get(lesson, TARJETAS_TAKEAWAY["clave"])
+
+
 MISSION_COMPLETE = [
     "",
     "================  MISSION COMPLETE  ================",
