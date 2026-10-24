@@ -13,14 +13,35 @@ Guía para quien opera la estación Cyber Lab durante la muestra. No hace falta 
 Para que arranque sola sin menú (kiosco), poné `autostart = true` en `config.toml` o corré con
 `--autostart`.
 
-## 2. Los tres modos (menú de setup)
+## 2. Los 4 modos de juego (el operador elige según el visitante)
+
+El selector **Modo de juego** del menú decide *cómo entra* el visitante. Es una rampa de
+accesibilidad: de "no sé nada" a "sé de redes".
+
+| Modo | Para quién | Cómo juega |
+|---|---|---|
+| 🟦 **Tarjetas** | No sabe nada de redes | **Sin teclado.** Toca un botón grande por paso; el único botón activo es el próximo paso. No se puede perder; el tablero y el "suspenso" hacen el show. |
+| 🟩 **Guiado** | Se anima un poco | La terminal, pero el próximo comando aparece **ya escrito** en el renglón: alcanza apretar **Enter**. Narra en lenguaje simple qué hizo. Tampoco se pierde. |
+| 🟥 **Experto** | Sabe de redes | La terminal real, sin ayuda, con sus 4 dificultades. Es el modo clásico. Acá **sí** se puede no llegar. |
+| 🧩 **Reto** | Reto / grupos | Escape room: acertijos con cronómetro donde el **tablero y los componentes** (router, switches, cable/canaleta) dan las pistas. Se responde eligiendo o tipeando. |
+
+> En **Tarjetas** y **Guiado** el objetivo siempre se logra (con suspenso); la **Lección** rota o se fija
+> abajo. En **Reto**, si el reloj llega a 0 no se escapa.
+
+### Opciones del menú de setup
 
 | Opción | Qué hace |
 |---|---|
-| **Panel visual** | On: muestra el mapa de red animado junto a la terminal. Off: solo terminal (más liviano). |
-| **Motor** | **Simulado**: nada toca la red real (para ensayar o como fallback). **Real**: los comandos corren de verdad. |
-| **Dificultad** | **Fácil**: comando simple + la IP concreta. **Medio**: te orienta por concepto, sin comandos obvios ni IP. **Difícil**: pistas con los comandos **reales** (`nmap`, `hydra`, `curl`) sin las IP. **Pro**: sin comandos ni pistas concretas. |
-| **Modo libre** | **Misión**: objetivo el FILE-SERVER, 5 min. **Libre**: tiempo infinito, sin orden, y **todos los dispositivos son hackeables** (cada uno con su propia FLAG). Se combina con cualquier dificultad. |
+| **Modo de juego** | Tarjetas / Guiado / Experto / Reto (ver tabla de arriba). |
+| **Lección** | *(solo Tarjetas/Guiado)* qué enseñanza se lleva el visitante en el paso de "entrar": **Clave débil**, **Dato expuesto**, **Truco login**, o **Rotar** (una distinta por ronda). |
+| **Panel visual** | On: muestra el mapa de red animado al costado. Off: más liviano. |
+| **Motor** | **Simulado**: nada toca la red real (ensayo o fallback). **Real**: los comandos corren de verdad. |
+| **Dificultad** | *(solo Experto)* **Fácil**: comando + IP. **Medio**: por concepto. **Difícil**: comandos reales (`nmap`, `hydra`, `curl`) sin IP. **Pro**: sin pistas. |
+| **Modo libre** | *(Experto/Guiado)* **Misión**: objetivo FILE-SERVER, 5 min. **Libre**: tiempo infinito, todos los dispositivos hackeables (cada uno con su FLAG). |
+
+> El menú **habilita solo lo que aplica** al modo elegido (la dificultad se activa en Experto; la lección,
+> en Tarjetas/Guiado). Para **volver al menú desde cualquier modo**: `Ctrl+M` (o el comando `menu` en la
+> terminal, o `[M]` al terminar).
 
 > En **cualquier** dificultad podés escribir tanto los comandos guiados (`scan`, `inspect <ip>`…)
 > como la sintaxis real de las herramientas (`nmap`, `hydra`, `curl`). La dificultad solo cambia
@@ -28,6 +49,9 @@ Para que arranque sola sin menú (kiosco), poné `autostart = true` en `config.t
 > `hydra` real si está instalado.
 
 ## 3. La misión, paso a paso (lo que ve el visitante)
+
+> Esto describe los modos con **terminal** (Experto y Guiado). En **Guiado**, cada paso llega con el
+> comando ya escrito: el visitante solo aprieta **Enter**. Para **Tarjetas** y **Reto**, ver 3.b y 3.c.
 
 0. **Pantalla de espera** con efecto "matrix". Cualquier tecla arranca.
 1. **Briefing**: mensaje de misión + cronómetro de 5 minutos.
@@ -48,6 +72,25 @@ Para que arranque sola sin menú (kiosco), poné `autostart = true` en `config.t
 
 Si el visitante queda inactivo (~40 s configurable), la terminal ofrece una **pista** según el paso
 y la dificultad. También puede escribir `hint` o `help` cuando quiera.
+
+### 3.b. Modo Tarjetas (sin teclado)
+
+Un botón grande por paso; el visitante solo toca. Recorrido en 4 toques:
+
+1. **ESCANEAR LA RED** → se encienden los aparatos en el tablero y dice cuántos hay.
+2. **ENTRAR AL SERVIDOR** → arranca el **suspenso** (cuenta regresiva + miles de claves probándose +
+   barra de "intrusión detectada", todo en rojo) y **siempre** termina en *ACCESO CONCEDIDO*; aparece la
+   enseñanza de la lección.
+3. **BUSCAR EL ARCHIVO** → abre las carpetas del servidor.
+4. **LLEVARSE EL SECRETO** → copia el archivo → **Misión cumplida** con la enseñanza. Tocar para jugar de nuevo.
+
+### 3.c. Modo Reto (escape room)
+
+4 acertijos con un reloj; el **tablero** da las pistas. Se responde eligiendo una opción o tipeando un
+número. Una respuesta equivocada **descuenta tiempo**; el botón **PISTA** vuelve a mostrar la clave en
+las luces. Los acertijos: contar los nodos que titilan, encontrar **el cable roto** (el LED quemado del
+tablero), contar los destellos del **router**, y seguir la señal por la **canaleta** hasta su destino.
+Si el reloj llega a 0, no se escapa (tocar para reintentar).
 
 ## 4. Las 3 formas de entrar (chuleta del operador)
 
