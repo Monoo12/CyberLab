@@ -15,6 +15,15 @@ from app.backend.models import Host
 
 VALID_ENGINES = ("simulated", "real")
 VALID_DIFFICULTIES = ("facil", "medio", "dificil", "pro")
+# Modos de juego (seccion "rediseno"): como entra el visitante.
+#   tarjetas -> sin teclado, tarjetas grandes (el que no sabe nada)
+#   guiado   -> terminal con el comando sugerido (un Enter); puente
+#   experto  -> la terminal real de hoy, con sus 4 dificultades adentro
+#   reto     -> escape room: acertijos con cronometro, pistas por LEDs
+VALID_MODES = ("tarjetas", "guiado", "experto", "reto")
+# Leccion que se lleva el visitante en tarjetas/guiado; "rotar" alterna por ronda.
+#   clave -> contrasena debil   expuesto -> dato a la vista   login -> truco en el formulario
+VALID_LESSONS = ("rotar", "clave", "expuesto", "login")
 
 
 @dataclass
@@ -24,6 +33,8 @@ class Modes:
     difficulty: str = "facil"
     autostart: bool = False
     free_mode: bool = False  # tiempo infinito, sin orden, todos los dispositivos hackeables
+    mode: str = "experto"    # tarjetas | guiado | experto | reto (como juega el visitante)
+    lesson: str = "rotar"    # rotar | clave | expuesto | login (solo tarjetas/guiado)
 
 
 @dataclass
@@ -116,6 +127,8 @@ def load_config(path: str | Path | None = None, argv: list[str] | None = None) -
         difficulty=str(m.get("difficulty", "facil")),
         autostart=bool(m.get("autostart", False)),
         free_mode=bool(m.get("free_mode", False)),
+        mode=str(m.get("mode", "experto")),
+        lesson=str(m.get("lesson", "rotar")),
     )
     t = raw.get("timing", {})
     timing = Timing(
@@ -172,6 +185,8 @@ def _apply_cli_overrides(cfg: Config, argv: list[str] | None) -> None:
     parser = argparse.ArgumentParser(description="Cyber Lab - app del visitante")
     parser.add_argument("--engine", choices=VALID_ENGINES)
     parser.add_argument("--difficulty", choices=VALID_DIFFICULTIES)
+    parser.add_argument("--mode", choices=VALID_MODES)
+    parser.add_argument("--lesson", choices=VALID_LESSONS)
     parser.add_argument("--no-visual", action="store_true")
     parser.add_argument("--visual", action="store_true")
     parser.add_argument("--autostart", action="store_true")
@@ -183,6 +198,10 @@ def _apply_cli_overrides(cfg: Config, argv: list[str] | None) -> None:
         cfg.modes.engine = args.engine
     if args.difficulty:
         cfg.modes.difficulty = args.difficulty
+    if args.mode:
+        cfg.modes.mode = args.mode
+    if args.lesson:
+        cfg.modes.lesson = args.lesson
     if args.no_visual:
         cfg.modes.visual = False
     if args.visual:
@@ -200,5 +219,9 @@ def _validate(cfg: Config) -> None:
         raise ValueError(f"engine invalido: {cfg.modes.engine}")
     if cfg.modes.difficulty not in VALID_DIFFICULTIES:
         raise ValueError(f"difficulty invalida: {cfg.modes.difficulty}")
+    if cfg.modes.mode not in VALID_MODES:
+        raise ValueError(f"mode invalido: {cfg.modes.mode}")
+    if cfg.modes.lesson not in VALID_LESSONS:
+        raise ValueError(f"lesson invalida: {cfg.modes.lesson}")
     if cfg.host_by_role("fileserver") is None:
         raise ValueError("config: falta un host con role='fileserver'")

@@ -6,9 +6,16 @@
 [modes]
 visual    = true         # panel visual (mapa de red) on/off
 engine    = "simulated"  # "simulated" | "real"
-difficulty= "facil"      # "facil" | "medio" | "dificil" | "pro" (cuanto/como te guia)
+mode      = "experto"    # "tarjetas" | "guiado" | "experto" | "reto" (como juega el visitante)
+difficulty= "facil"      # "facil" | "medio" | "dificil" | "pro" (solo EXPERTO: cuanto/como te guia)
+lesson    = "rotar"      # "rotar" | "clave" | "expuesto" | "login" (solo tarjetas/guiado)
 autostart = false        # true = saltea el menu de setup (modo kiosco)
 free_mode = false        # true = modo libre: tiempo infinito, sin orden, todo hackeable
+# Modos de juego:
+#   tarjetas -> sin teclado, tarjetas grandes; para quien no sabe nada de redes
+#   guiado   -> terminal con el proximo comando sugerido (un Enter); puente a lo real
+#   experto  -> la terminal real, con las 4 dificultades (es el modo de hoy)
+#   reto     -> escape room: acertijos con cronometro, el tablero da las pistas
 
 [timing]
 mission_seconds   = 300  # duracion de la mision (5 min)

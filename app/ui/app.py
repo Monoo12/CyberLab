@@ -94,8 +94,12 @@ class MissionApp:
         top = ctk.CTkFrame(self.mission_frame, fg_color=theme.BG, height=34)
         top.pack(fill="x", side="top")
         engine_txt = "SIMULADO" if self.cfg.modes.engine == "simulated" else "REAL"
-        ctk.CTkLabel(top, text="  CYBER LAB   //   motor: " + engine_txt +
-                     "   //   dificultad: " + self.cfg.modes.difficulty.upper() +
+        mode_txt = self.cfg.modes.mode.upper()
+        # la dificultad solo aplica al modo EXPERTO
+        extra = ("   //   dificultad: " + self.cfg.modes.difficulty.upper()
+                 if self.cfg.modes.mode == "experto" else "")
+        ctk.CTkLabel(top, text="  CYBER LAB   //   modo: " + mode_txt +
+                     "   //   motor: " + engine_txt + extra +
                      "   //   'menu' para volver",
                      text_color=theme.DIM, font=(self.mono, 12)).pack(side="left")
         self.timer_label = ctk.CTkLabel(top, text="TIEMPO 05:00", text_color=theme.GREEN,

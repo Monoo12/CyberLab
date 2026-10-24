@@ -46,6 +46,8 @@ class MissionController:
 
         self.parser = CommandParser(cfg.network.cidr)
         self.difficulty = cfg.modes.difficulty
+        self.mode = cfg.modes.mode          # tarjetas | guiado | experto | reto
+        self.lesson = cfg.modes.lesson      # rotar | clave | expuesto | login
         self.free = cfg.modes.free_mode
         self.available = available_commands(self.difficulty, self.free)
         self.state = WAITING
