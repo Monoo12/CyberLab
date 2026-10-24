@@ -17,7 +17,7 @@ import sqlite3
 from flask import (Flask, g, redirect, render_template, request, send_file,
                    session, url_for)
 
-APP_SECRET = os.environ.get("FLASK_SECRET", "cyberlab-dev-secret")
+APP_SECRET = os.environ.get("FLASK_SECRET", "netlab-dev-secret")
 DB_PATH = os.environ.get("LAB_DB", "/tmp/lab.db")
 BASE_PATH = os.environ.get("LAB_BASE", "/srv/lab")
 LAB_USER = os.environ.get("LAB_USER", "admin")

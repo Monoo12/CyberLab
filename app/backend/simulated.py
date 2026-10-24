@@ -64,7 +64,7 @@ _DEVICES = {
         },
         "files": {
             "/flag.txt": "FLAG{r0ut3r_c0n_cl4v3_d3_f4bric4}\nEl router usaba admin/admin. Cambia las claves por defecto.\n",
-            "/etc/router.conf": "hostname=router\nadmin_user=admin\nadmin_pass=admin\nwifi_ssid=CyberLab\n",
+            "/etc/router.conf": "hostname=router\nadmin_user=admin\nadmin_pass=admin\nwifi_ssid=NetLab\n",
             "/etc/passwd": "root:x:0:0:root:/root:/bin/sh\nadmin:x:1000:1000:admin:/home/admin:/bin/sh\n",
         },
     },
@@ -198,7 +198,7 @@ class SimulatedBackend(NetworkBackend):
         title = host.name if host else "SERVICIO"
         html = _LOGIN_HTML.format(user=self.cfg.creds.leak_user, pwd=self.cfg.creds.leak_pass,
                                   title=title)
-        f = Path(tempfile.gettempdir()) / "cyberlab_login.html"
+        f = Path(tempfile.gettempdir()) / "netlab_login.html"
         f.write_text(html, encoding="utf-8")
         self._page_path = f
         url = f.as_uri()

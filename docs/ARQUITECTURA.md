@@ -31,7 +31,7 @@ app/
     flow.py          MissionController (maquina de estados, hilos, timers, pistas)
     commands.py      parser + lista blanca (regex) + validacion de IP
     script.py        todo el texto visible (espanol), ASCII art, pistas
-firmware/cyberlab_leds/cyberlab_leds.ino   FastLED multi-pin + parser serial
+firmware/netlab_leds/netlab_leds.ino   FastLED multi-pin + parser serial
 node/                el FILE-SERVER vulnerable (Docker: Flask + SSH)
 tools/               led_test.py, build_app.py
 ```
@@ -126,7 +126,7 @@ La app necesita tres cosas del equipo real que Docker no da limpio, sobre todo e
    Windows**, justo el escenario de "cualquier PC".
 3. **Abrir el navegador real** del host en `connect`.
 
-Por eso la app se distribuye como **bundle PyInstaller** (`tools/build_app.py`, `cyberlab.spec`):
+Por eso la app se distribuye como **bundle PyInstaller** (`tools/build_app.py`, `netlab.spec`):
 carpeta autocontenida que corre sin instalar Python, con `config.toml` **externo y editable** al lado
 del ejecutable. Es **multiplataforma** (código sin supuestos de un solo SO), pero PyInstaller **no
 cross-compila**: se genera un bundle en Windows (`.exe`) y otro en Linux (ELF). Misma base de código,

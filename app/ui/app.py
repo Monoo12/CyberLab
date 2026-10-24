@@ -29,7 +29,7 @@ class MissionApp:
         self.cfg = cfg
         ctk.set_appearance_mode("dark")
         self.root = ctk.CTk()
-        self.root.title("Cyber Lab")
+        self.root.title("NetLab")
         self.root.configure(fg_color=theme.BG)
         self.root.geometry("1200x760")
         self.root.bind("<F11>", self._toggle_fullscreen)
@@ -94,7 +94,7 @@ class MissionApp:
         top = ctk.CTkFrame(self.mission_frame, fg_color=theme.BG, height=34)
         top.pack(fill="x", side="top")
         engine_txt = "SIMULADO" if self.cfg.modes.engine == "simulated" else "REAL"
-        ctk.CTkLabel(top, text="  CYBER LAB   //   motor: " + engine_txt +
+        ctk.CTkLabel(top, text="  NETLAB   //   motor: " + engine_txt +
                      "   //   dificultad: " + self.cfg.modes.difficulty.upper() +
                      "   //   'menu' para volver",
                      text_color=theme.DIM, font=(self.mono, 12)).pack(side="left")

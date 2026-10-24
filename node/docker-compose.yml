@@ -4,8 +4,8 @@
 services:
   fileserver:
     build: .
-    image: cyberlab-fileserver
-    container_name: cyberlab-fileserver
+    image: netlab-fileserver
+    container_name: netlab-fileserver
     ports:
       - "80:80"       # web vulnerable
       - "2222:22"     # SSH del nodo en el host:2222 (evita chocar con el sshd propio del equipo).

@@ -1,4 +1,4 @@
-"""Paleta y fuentes del look 'terminal/cyber'."""
+"""Paleta y fuentes del look 'terminal'."""
 from __future__ import annotations
 
 # Colores

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Armado del Cyber Lab</title>
+<title>Armado del NetLab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -170,7 +170,7 @@
 
 <header class="top">
   <div class="top-in">
-    <span class="brand"><b><span class="dot">&gt;</span> CYBER LAB</b><span>guia de armado</span></span>
+    <span class="brand"><b><span class="dot">&gt;</span> NETLAB</b><span>guia de armado</span></span>
     <button class="tgl" id="themeToggle" aria-label="Cambiar tema">tema</button>
   </div>
 </header>
@@ -192,7 +192,7 @@
 
   <section id="intro">
     <div class="eyebrow">De cero · paso a paso</div>
-    <h1>Armado del Cyber Lab<span class="cur">_</span></h1>
+    <h1>Armado del NetLab<span class="cur">_</span></h1>
     <p class="lead">Todo lo necesario para montar el laboratorio desde cero: armar la tira de <strong>LEDs</strong>,
       levantar los <strong>servidores</strong>, cablear la <strong>red</strong> y dejar la <strong>configuración</strong>
       lista para que el visitante cumpla la misión.</p>
@@ -399,20 +399,20 @@
     <ol class="steps">
       <li><span class="step-t">Instalá el Arduino IDE</span>, el soporte de placas <strong>ESP8266</strong>
         (Gestor de tarjetas) y la librería <strong>FastLED</strong> (Gestor de librerías).</li>
-      <li><span class="step-t">Abrí</span> <code>firmware/cyberlab_leds/cyberlab_leds.ino</code> y elegí la placa
+      <li><span class="step-t">Abrí</span> <code>firmware/netlab_leds/netlab_leds.ino</code> y elegí la placa
         <em>NodeMCU 1.0 (ESP-12E)</em> y el puerto.</li>
       <li><span class="step-t">El pin ya viene listo</span>: en ESP8266 el sketch usa el GPIO5, que es el pin
         <code>D1</code> del NodeMCU. Cambialo solo si cableás otro.
-        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="k">#define</span> DATA_PIN 5   <span class="c">// GPIO5 = D1 del NodeMCU</span></pre></div>
+        <div class="code"><div class="bar"><span class="t">netlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="k">#define</span> DATA_PIN 5   <span class="c">// GPIO5 = D1 del NodeMCU</span></pre></div>
       </li>
       <li><span class="step-t">Revisá los largos</span>: <code>BRANCH_COUNTS</code> ya trae los LEDs de cada tramo. Si al
         cortar contaste otro número, poné el real: los números de los tramos siguientes se corren solos.
-        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="c">// T1 50cm, T2 77cm, T3 73cm, T4 43cm a 60 LED/m</span>
+        <div class="code"><div class="bar"><span class="t">netlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="c">// T1 50cm, T2 77cm, T3 73cm, T4 43cm a 60 LED/m</span>
 <span class="k">const int</span> BRANCH_COUNTS[NUM_BRANCHES] = { 30, 46, 43, 25 };</pre></div>
       </li>
       <li><span class="step-t">Si toda la animación va al revés</span> (el barrido no va de la TERMINAL hacia el FILE-SERVER),
         la cadena arranca del otro lado: no recablees, poné <code>STRIP_REVERSED</code> en <code>true</code>.
-        <div class="code"><div class="bar"><span class="t">cyberlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="k">const bool</span> STRIP_REVERSED = <span class="k">true</span>;  <span class="c">// DATA IN del lado del FILE-SERVER</span></pre></div>
+        <div class="code"><div class="bar"><span class="t">netlab_leds.ino</span><button class="copy">copiar</button></div><pre><span class="k">const bool</span> STRIP_REVERSED = <span class="k">true</span>;  <span class="c">// DATA IN del lado del FILE-SERVER</span></pre></div>
       </li>
       <li><span class="step-t">Subí el sketch.</span> El firmware ya limita el consumo a 9 A para la fuente de 10 A
         (no hay riesgo de brownout) y las animaciones son verde/ámbar/cyan a ~55% de brillo.</li>
@@ -480,9 +480,9 @@ node\fileserver.bat on | off | reset | status | logs    <span class="c"># Window
     <h3>C2 · TERMINAL (PC del visitante)</h3>
     <p>Dos caminos. El más rápido en Windows es la <strong>release</strong> (no instala Python):</p>
     <ol class="steps">
-      <li><span class="step-t">Descargá</span> <code>CyberLab-...-windows.zip</code> desde
+      <li><span class="step-t">Descargá</span> <code>NetLab-...-windows.zip</code> desde
         <a href="https://github.com/Monoo12/CyberLab/releases" target="_blank" rel="noopener">github.com/Monoo12/CyberLab/releases</a>,
-        descomprimilo y doble clic en <code>CyberLab.exe</code>. Arranca en Simulado.</li>
+        descomprimilo y doble clic en <code>NetLab.exe</code>. Arranca en Simulado.</li>
       <li><span class="step-t">O instalá con scripts</span> (crea el entorno e instala los requisitos):
         <div class="code"><div class="bar"><span class="t">Linux</span><button class="copy">copiar</button></div><pre>bash scripts/setup-terminal.sh
 ./run-terminal.sh</pre></div>
@@ -570,14 +570,14 @@ baud    = 115200</pre></div>
         </tbody>
       </table>
     </div>
-    <p class="foot">Cyber Lab · guía de armado · detalle completo en <code>docs/</code> (GUIA-HARDWARE, DESPLIEGUE-REAL, RED-ROUTER, LEDS).</p>
+    <p class="foot">NetLab · guía de armado · detalle completo en <code>docs/</code> (GUIA-HARDWARE, DESPLIEGUE-REAL, RED-ROUTER, LEDS).</p>
   </section>
 
 </main>
 
 <script>
   (function(){
-    var root=document.documentElement, KEY="cyberlab-guide-theme", btn=document.getElementById("themeToggle");
+    var root=document.documentElement, KEY="netlab-guide-theme", btn=document.getElementById("themeToggle");
     try{ var s=localStorage.getItem(KEY); if(s==="dark"||s==="light") root.setAttribute("data-theme",s); }catch(e){}
     function cur(){ var a=root.getAttribute("data-theme"); if(a) return a;
       return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"; }

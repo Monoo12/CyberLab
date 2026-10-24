@@ -1,7 +1,7 @@
 # Hoja de referencia de LEDs (cue sheet)
 
 Documenta **qué comando/evento enciende qué tramo (segmento) de LED y con qué animación**, para
-programarlo/afinarlo en el firmware (`firmware/cyberlab_leds/cyberlab_leds.ino`). Es el espejo exacto
+programarlo/afinarlo en el firmware (`firmware/netlab_leds/netlab_leds.ino`). Es el espejo exacto
 de `app/leds/segments.py` y de la orquestación en `app/mission/flow.py`.
 
 ## 1. Tramos / segmentos físicos

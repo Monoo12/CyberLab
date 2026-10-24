@@ -169,7 +169,7 @@ def load_config(path: str | Path | None = None, argv: list[str] | None = None) -
 
 
 def _apply_cli_overrides(cfg: Config, argv: list[str] | None) -> None:
-    parser = argparse.ArgumentParser(description="Cyber Lab - app del visitante")
+    parser = argparse.ArgumentParser(description="NetLab - app del visitante")
     parser.add_argument("--engine", choices=VALID_ENGINES)
     parser.add_argument("--difficulty", choices=VALID_DIFFICULTIES)
     parser.add_argument("--no-visual", action="store_true")

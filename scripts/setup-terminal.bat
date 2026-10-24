@@ -1,6 +1,6 @@
 @echo off
 rem ============================================================================
-rem Cyber Lab - instalacion del dispositivo TERMINAL (PC del visitante) en Windows.
+rem NetLab - instalacion del dispositivo TERMINAL (PC del visitante) en Windows.
 rem
 rem Crea el entorno virtual, instala las dependencias de la app, deja config.toml
 rem y usa el lanzador run-terminal.bat. Requiere Python 3.11+ ya instalado
@@ -17,7 +17,7 @@ popd
 cd /d "%ROOT%"
 
 echo.
-echo [cyberlab] Instalando la TERMINAL en: %ROOT%
+echo [netlab] Instalando la TERMINAL en: %ROOT%
 echo.
 
 rem --- Python disponible? (preferimos el launcher 'py', si no 'python') ---
@@ -25,35 +25,35 @@ set "PY="
 py -3 --version >nul 2>&1 && set "PY=py -3"
 if not defined PY ( python --version >nul 2>&1 && set "PY=python" )
 if not defined PY (
-  echo [cyberlab] ERROR: no encontre Python 3.
+  echo [netlab] ERROR: no encontre Python 3.
   echo    Instalalo desde https://www.python.org/downloads/windows/
   echo    En el instalador marca "Add python.exe to PATH" y deja tcl/tk ^(Tkinter^).
   exit /b 1
 )
-echo [cyberlab] Python detectado:
+echo [netlab] Python detectado:
 %PY% --version
 
 rem --- entorno virtual ---
 if not exist ".venv\Scripts\python.exe" (
-  echo [cyberlab] Creando entorno virtual .venv ...
+  echo [netlab] Creando entorno virtual .venv ...
   %PY% -m venv .venv
-  if errorlevel 1 ( echo [cyberlab] ERROR creando el venv. & exit /b 1 )
+  if errorlevel 1 ( echo [netlab] ERROR creando el venv. & exit /b 1 )
 )
 set "VPY=%ROOT%\.venv\Scripts\python.exe"
 
-echo [cyberlab] Instalando dependencias de la app ...
+echo [netlab] Instalando dependencias de la app ...
 "%VPY%" -m pip install --upgrade pip
 "%VPY%" -m pip install -r requirements.txt
-if errorlevel 1 ( echo [cyberlab] ERROR instalando requirements. & exit /b 1 )
+if errorlevel 1 ( echo [netlab] ERROR instalando requirements. & exit /b 1 )
 
 rem --- config.toml (no se versiona; se crea desde la plantilla) ---
 if not exist "config.toml" (
   copy /y "config.example.toml" "config.toml" >nul
-  echo [cyberlab] config.toml creado desde la plantilla ^(ajusta IPs/credenciales para modo real^).
+  echo [netlab] config.toml creado desde la plantilla ^(ajusta IPs/credenciales para modo real^).
 )
 
 echo.
-echo [cyberlab] LISTO. La terminal quedo instalada.
+echo [netlab] LISTO. La terminal quedo instalada.
 echo    Arrancar:          run-terminal.bat             ^(en el MENU elegis Simulado/Real, dificultad^)
 echo    Kiosco ^(sin menu^): run-terminal.bat --autostart
 echo.

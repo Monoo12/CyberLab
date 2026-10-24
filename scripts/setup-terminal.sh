@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Cyber Lab - instalacion del dispositivo TERMINAL (la PC del visitante) en Linux.
+# NetLab - instalacion del dispositivo TERMINAL (la PC del visitante) en Linux.
 #
 # Clona (o actualiza) el repo del juego, instala Python + dependencias de la app,
 # nmap, un navegador para el paso 'connect', da acceso al USB serial de los LEDs
@@ -14,11 +14,11 @@
 # ============================================================================
 set -euo pipefail
 
-REPO_URL="${CYBERLAB_REPO:-https://github.com/Monoo12/CyberLab.git}"
-TARGET_DIR="${CYBERLAB_DIR:-$HOME/CyberLab}"
+REPO_URL="${NETLAB_REPO:-https://github.com/Monoo12/CyberLab.git}"
+TARGET_DIR="${NETLAB_DIR:-$HOME/NetLab}"
 
-log()  { printf '\n\033[1;32m[cyberlab]\033[0m %s\n' "$*"; }
-warn() { printf '\n\033[1;33m[cyberlab]\033[0m %s\n' "$*"; }
+log()  { printf '\n\033[1;32m[netlab]\033[0m %s\n' "$*"; }
+warn() { printf '\n\033[1;33m[netlab]\033[0m %s\n' "$*"; }
 
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"

@@ -1,12 +1,12 @@
 # Manual de usuario — operador de la estación
 
-Guía para quien opera la estación Cyber Lab durante la muestra. No hace falta saber programar.
+Guía para quien opera la estación NetLab durante la muestra. No hace falta saber programar.
 
 ## 1. Encender y arrancar
 
 1. Prendé la PC de la estación y, si corresponde, el equipo del nodo (FILE-SERVER).
 2. Abrí la app:
-   - Bundle: doble clic en `CyberLab` (carpeta `dist/CyberLab/`).
+   - Bundle: doble clic en `NetLab` (carpeta `dist/NetLab/`).
    - Desde código: `python -m app.main`.
 3. Aparece el **menú de configuración** con tres opciones. Elegí y tocá **COMENZAR**.
 

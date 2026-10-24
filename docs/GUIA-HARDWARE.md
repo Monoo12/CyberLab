@@ -8,7 +8,7 @@ El software ya está listo; esta guía explica cómo conectarlo al mundo físico
 ## 1. Cargar el firmware en el microcontrolador
 
 1. Instalá el **Arduino IDE** y la librería **FastLED** (Gestor de librerías → "FastLED").
-2. Abrí `firmware/cyberlab_leds/cyberlab_leds.ino`.
+2. Abrí `firmware/netlab_leds/netlab_leds.ino`.
 3. Elegí tu placa (Arduino UNO/Nano, ESP8266 NodeMCU o ESP32) y el puerto.
 4. **Revisá el tope del sketch** (ver sección 3): el pin de datos (en ESP8266 ya viene en `D1`) y, si
    cortaste distinto, la cantidad de LEDs por tramo.

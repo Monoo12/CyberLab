@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Cyber Lab - instalacion del FILE-SERVER (el nodo vulnerable) en Linux.
+# NetLab - instalacion del FILE-SERVER (el nodo vulnerable) en Linux.
 #
 # Clona (o actualiza) el repo, instala Docker, construye la imagen del nodo
 # (Flask vulnerable + SSH), lo deja ENCENDIDO y crea accesos faciles ON/OFF
@@ -14,11 +14,11 @@
 # ============================================================================
 set -euo pipefail
 
-REPO_URL="${CYBERLAB_REPO:-https://github.com/Monoo12/CyberLab.git}"
-TARGET_DIR="${CYBERLAB_DIR:-$HOME/CyberLab}"
+REPO_URL="${NETLAB_REPO:-https://github.com/Monoo12/CyberLab.git}"
+TARGET_DIR="${NETLAB_DIR:-$HOME/NetLab}"
 
-log()  { printf '\n\033[1;32m[cyberlab]\033[0m %s\n' "$*"; }
-warn() { printf '\n\033[1;33m[cyberlab]\033[0m %s\n' "$*"; }
+log()  { printf '\n\033[1;32m[netlab]\033[0m %s\n' "$*"; }
+warn() { printf '\n\033[1;33m[netlab]\033[0m %s\n' "$*"; }
 
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
@@ -94,8 +94,8 @@ chmod +x "$REPO_ROOT/node/fileserver.sh" "$REPO_ROOT/node/reset.sh" 2>/dev/null 
 log "Verificando que el nodo responda (contenedor + web + SSH + usuario ctf)..."
 sleep 4   # darle un momento a Flask/sshd/seed_db
 NODE_OK=1
-if [ "$($SUDO docker inspect -f '{{.State.Running}}' cyberlab-fileserver 2>/dev/null)" = "true" ]; then
-  echo "   [OK] contenedor cyberlab-fileserver corriendo"
+if [ "$($SUDO docker inspect -f '{{.State.Running}}' netlab-fileserver 2>/dev/null)" = "true" ]; then
+  echo "   [OK] contenedor netlab-fileserver corriendo"
 else
   warn "   [!] el contenedor NO quedo corriendo -> mira:  node/fileserver.sh logs"; NODE_OK=0
 fi
@@ -106,7 +106,7 @@ if command -v curl >/dev/null 2>&1; then
     warn "   [!] la web NO responde en :80 -> revisa logs y que el 80 este libre"; NODE_OK=0
   fi
 fi
-if $SUDO docker exec cyberlab-fileserver id ctf >/dev/null 2>&1; then
+if $SUDO docker exec netlab-fileserver id ctf >/dev/null 2>&1; then
   echo "   [OK] usuario ctf existe en el contenedor (lo usan ls/read por SSH)"
 else
   warn "   [!] falta el usuario ctf -> ls/read por SSH fallaran"; NODE_OK=0
@@ -128,11 +128,11 @@ for d in "$HOME/Desktop" "$HOME/Escritorio"; do [ -d "$d" ] && DESKTOP="$d"; don
 if [ -n "$DESKTOP" ]; then
   log "Creando accesos de escritorio ON/OFF en $DESKTOP..."
   make_launcher() {  # nombre, accion, comentario
-    local file="$DESKTOP/CyberLab FileServer $1.desktop"
+    local file="$DESKTOP/NetLab FileServer $1.desktop"
     cat > "$file" <<DESK
 [Desktop Entry]
 Type=Application
-Name=CyberLab FileServer $1
+Name=NetLab FileServer $1
 Comment=$3
 Exec=bash -c 'cd "$REPO_ROOT/node"; ./fileserver.sh $2; echo; read -p "Enter para cerrar..."'
 Terminal=true
@@ -152,7 +152,7 @@ echo "     node/fileserver.sh off      # apagar"
 echo "     node/fileserver.sh reset    # reiniciar a estado limpio (entre visitantes)"
 echo "     node/fileserver.sh status   # ver estado"
 echo "     node/fileserver.sh logs     # ver logs en vivo"
-[ -n "$DESKTOP" ] && echo "   O doble clic en los accesos 'CyberLab FileServer ON/OFF' del escritorio."
+[ -n "$DESKTOP" ] && echo "   O doble clic en los accesos 'NetLab FileServer ON/OFF' del escritorio."
 echo
 echo "   IMPORTANTE: las credenciales/IP del nodo deben coincidir con el config.toml de la"
 echo "   terminal (LAB_PASS = [creds].leak_pass, usuario ctf). Ver docs/DESPLIEGUE-REAL.md."

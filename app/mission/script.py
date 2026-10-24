@@ -10,12 +10,12 @@ El parser acepta las dos sintaxis (guiada y real) en TODAS las dificultades.
 from __future__ import annotations
 
 BANNER = r"""
-  ____      _               _          _
- / ___|   _| |__   ___ _ __| |    __ _| |__
-| |  | | | | '_ \ / _ \ '__| |   / _` | '_ \
-| |__| |_| | |_) |  __/ |  | |__| (_| | |_) |
- \____\__, |_.__/ \___|_|  |_____\__,_|_.__/
-      |___/        ACCESO A SISTEMAS  v1.0
+ _   _      _   _          _
+| \ | | ___| |_| |    __ _| |__
+|  \| |/ _ \ __| |   / _` | '_ \
+| |\  |  __/ |_| |__| (_| | |_) |
+|_| \_|\___|\__|_____\__,_|_.__/
+                 ACCESO A SISTEMAS  v1.0
 """
 
 

@@ -1,3 +1,3 @@
 # Marcador para versionar la carpeta app/assets/ (git no trackea dirs vacios).
-# Dejar iconos/pngs del panel visual aca; cyberlab.spec los incluye en el bundle
+# Dejar iconos/pngs del panel visual aca; netlab.spec los incluye en el bundle
 # automaticamente si hay algo distinto de este .gitkeep.

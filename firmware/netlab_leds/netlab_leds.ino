@@ -1,5 +1,5 @@
 /* ==========================================================================
- * Cyber Lab - firmware de la tira LED (Arduino / ESP8266 / ESP32)
+ * NetLab - firmware de la tira LED (Arduino / ESP8266 / ESP32)
  *
  * Recibe comandos de texto por USB serial desde la app del visitante y anima
  * los tramos de la red sobre el tablero. NO usa WiFi ni red: solo lee lineas

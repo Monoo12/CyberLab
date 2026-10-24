@@ -1,6 +1,6 @@
 """Mapeo de enlaces logicos de la red a segmentos fisicos de LED.
 
-Espejo del firmware (firmware/cyberlab_leds): una sola tira encadenada en un pin, donde
+Espejo del firmware (firmware/netlab_leds): una sola tira encadenada en un pin, donde
 cada tramo es un rango de LEDs. El id de segmento viaja por serial (SEG:<id>:<anim>).
 
 Topologia del tablero (68 LEDs; numeracion desde 0 como PIX, entre parentesis la

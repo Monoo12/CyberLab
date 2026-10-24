@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Spec de PyInstaller para la app del visitante (Cyber Lab).
+# Spec de PyInstaller para la app del visitante (NetLab).
 # Build one-folder (mas robusto para tkinter/customtkinter).
 # config.toml queda EXTERNO y editable junto al ejecutable (no se embebe).
 import os
@@ -38,7 +38,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="CyberLab",
+    name="NetLab",
     debug=False,
     strip=False,
     upx=False,
@@ -51,5 +51,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="CyberLab",
+    name="NetLab",
 )

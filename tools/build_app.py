@@ -3,7 +3,7 @@
 Uso (en la PC destino, corriendo en SU sistema operativo):
     python tools/build_app.py
 
-Resultado: dist/CyberLab/  (carpeta autocontenida). Se copia config.example.toml
+Resultado: dist/NetLab/  (carpeta autocontenida). Se copia config.example.toml
 como config.toml externo y editable junto al ejecutable, si no existe.
 
 PyInstaller NO cross-compila: para un .exe de Windows correr esto en Windows;
@@ -26,11 +26,11 @@ def main():
         print("Falta PyInstaller:  pip install -r requirements-dev.txt")
         sys.exit(1)
 
-    cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", str(ROOT / "cyberlab.spec")]
+    cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", str(ROOT / "netlab.spec")]
     print("$", " ".join(cmd))
     subprocess.run(cmd, cwd=ROOT, check=True)
 
-    dist = ROOT / "dist" / "CyberLab"
+    dist = ROOT / "dist" / "NetLab"
     cfg = dist / "config.toml"
     if dist.exists() and not cfg.exists():
         shutil.copyfile(ROOT / "config.example.toml", cfg)

@@ -1,6 +1,6 @@
 # Configuración de la red — router y switches
 
-Guía para dejar la red del laboratorio lista para Cyber Lab, con el hardware:
+Guía para dejar la red del laboratorio lista para NetLab, con el hardware:
 **router TP-Link AX3000 WiFi 6** (familia **Archer** por panel web, o **Deco** mesh por app) +
 **2× switch TL-SG1008D**.
 

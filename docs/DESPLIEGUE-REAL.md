@@ -50,7 +50,7 @@ lados. **El pre-flight (sección 4) te avisa si no matchean.**
 # En el equipo del nodo:
 cd node
 docker compose up -d --build          # levanta Flask (web) + SSH en el contenedor
-docker exec cyberlab-fileserver id ctf   # sanity: el usuario ctf existe
+docker exec netlab-fileserver id ctf   # sanity: el usuario ctf existe
 
 # En la PC de la muestra (ajustá config.toml a las IPs reales primero):
 nmap -sn 192.168.10.0/24              # sanity: nmap descubre el nodo

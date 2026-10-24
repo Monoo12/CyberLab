@@ -15,9 +15,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")"   # carpeta node/
 # Siempre el MISMO daemon (rootful): sin sudo si ya sos root, con sudo si no.
 # Evita el "split-brain" entre un daemon rootless y uno rootful (contenedores
 # duplicados, puertos que no bindean). Si tu Docker es rootless, exporta
-# CYBERLAB_NOSUDO=1 para no usar sudo.
+# NETLAB_NOSUDO=1 para no usar sudo.
 dc() {
-  if [ "$(id -u)" -eq 0 ] || [ "${CYBERLAB_NOSUDO:-0}" = "1" ]; then
+  if [ "$(id -u)" -eq 0 ] || [ "${NETLAB_NOSUDO:-0}" = "1" ]; then
     docker compose "$@"
   else
     sudo docker compose "$@"

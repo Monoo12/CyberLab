@@ -1,6 +1,6 @@
-# Cyber Lab
+# NetLab
 
-Experiencia interactiva de ciberseguridad para una muestra: el visitante cumple una misión de
+Experiencia interactiva de seguridad informática para una muestra: el visitante cumple una misión de
 "hacking" guiada (escanear la red → encontrar un servidor → explotar una vulnerabilidad → recuperar
 un archivo secreto) mientras un tablero físico con LEDs anima el recorrido de las comunicaciones
 sobre el cableado real.
@@ -76,7 +76,7 @@ Detalle completo (credenciales que deben coincidir, pre-flight, troubleshooting)
 
 ```bash
 python -m pip install -r requirements-dev.txt
-python tools/build_app.py           # genera dist/CyberLab/ (correr en cada SO)
+python tools/build_app.py           # genera dist/NetLab/ (correr en cada SO)
 ```
 
 `config.toml` queda **externo y editable** junto al ejecutable. PyInstaller no cross-compila: generar
@@ -91,6 +91,7 @@ un bundle en Windows y otro en Linux.
 - [docs/RED-ROUTER.md](docs/RED-ROUTER.md) — configurar el router TP-Link AX3000 y los switches.
 - [docs/LEDS.md](docs/LEDS.md) — qué comando enciende qué segmento de LED (para el firmware).
 - [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) — módulos, protocolo serial, Docker vs PyInstaller.
+- [docs/CONTEXTO-IA.md](docs/CONTEXTO-IA.md) — contexto completo del proyecto (foco en el circuito) para pasarle a otra IA y pedir recomendaciones.
 
 > El nodo es **inseguro por diseño** (vulnerable a propósito). Usarlo solo en la red aislada del
 > laboratorio, nunca en producción ni expuesto a internet.

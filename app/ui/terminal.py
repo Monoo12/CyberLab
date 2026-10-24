@@ -60,7 +60,7 @@ class TerminalPanel(tk.Frame):
         # Fila de prompt
         prow = tk.Frame(self, bg=theme.BG)
         prow.pack(fill="x", side="bottom")
-        self.prompt = tk.Label(prow, text=" visitante@cyberlab:~$ ", bg=theme.BG,
+        self.prompt = tk.Label(prow, text=" visitante@netlab:~$ ", bg=theme.BG,
                                fg=theme.GREEN, font=(mono_font, 13, "bold"))
         self.prompt.pack(side="left")
         self.entry = tk.Entry(prow, bg=theme.BG, fg=theme.WHITE, insertbackground=theme.GREEN,
@@ -103,7 +103,7 @@ class TerminalPanel(tk.Frame):
             self.writeln(ln, tag)
 
     def echo_command(self, cmd: str) -> None:
-        self._insert(" visitante@cyberlab:~$ ", "green")
+        self._insert(" visitante@netlab:~$ ", "green")
         self._insert(cmd + "\n", "white")
 
     def type_lines(self, lines, on_done=None, tag: str = "fg", cps: int | None = None) -> None:
