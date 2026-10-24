@@ -50,6 +50,7 @@ class MissionController:
         self.difficulty = cfg.modes.difficulty
         self.mode = cfg.modes.mode          # tarjetas | guiado | experto | reto
         self.lesson = cfg.modes.lesson      # rotar | clave | expuesto | login
+        self._round = 0                     # para rotar la leccion entre rondas
         self.free = cfg.modes.free_mode
         self.available = available_commands(self.difficulty, self.free)
         self.state = WAITING
@@ -88,6 +89,7 @@ class MissionController:
 
     def start_mission(self):
         self.state = BRIEFING
+        self.lesson = self._resolve_lesson()   # rota por ronda si lesson='rotar'
         self.access = False
         self.sessions = set()
         self.session_ip = None
@@ -349,9 +351,24 @@ class MissionController:
         """Modos para quien no sabe: no se puede fallar, con show de suspenso."""
         return self.mode in ("guiado", "tarjetas")
 
+    _ROTATION = ("clave", "expuesto", "login")
+    _LESSON_METHOD = {"clave": "hydra", "expuesto": "leak", "login": "sqli"}
+
+    def _resolve_lesson(self):
+        """Leccion concreta de esta ronda. 'rotar' cicla clave->expuesto->login."""
+        base = self.cfg.modes.lesson
+        if base in self._ROTATION:
+            return base
+        lesson = self._ROTATION[self._round % len(self._ROTATION)]
+        self._round += 1
+        return lesson
+
     def _lesson_key(self):
-        """Leccion concreta de la ronda ('rotar' se resuelve en otra fase)."""
-        return self.lesson if self.lesson in ("clave", "expuesto", "login") else "clave"
+        return self.lesson if self.lesson in self._ROTATION else "clave"
+
+    def _lesson_method(self):
+        """Via del backend que ilustra la leccion (clave->hydra, expuesto->leak, login->sqli)."""
+        return self._LESSON_METHOD.get(self._lesson_key(), "hydra")
 
     # ---- modo GUIADO: proximo comando sugerido + narracion en lenguaje simple ----
     def _suggested_command(self):
@@ -393,13 +410,15 @@ class MissionController:
         self.target_ip = ip
 
         # Modos accesibles: el "golpe 2" es el show de suspenso que termina en exito.
+        # La via usada coincide con la leccion de la ronda (clave/expuesto/login).
         if self._accessible() and self.suspense is not None:
+            acc_method = self._lesson_method()
             if self.netmap and role != "unknown":
                 self.netmap.pulse_role(role, times=10, color=theme.AMBER)
             self._busy(True)
             self.suspense.play(
                 role, self.lesson,
-                on_done=lambda: self._async(lambda: self.backend.exploit(ip, method),
+                on_done=lambda: self._async(lambda: self.backend.exploit(ip, acc_method),
                                             self._exploit_done))
             return
 
