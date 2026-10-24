@@ -101,8 +101,9 @@ class MissionController:
         self.term.clear()
         self.term.write_lines(script.BANNER.splitlines(), tag="banner")
         self.term.writeln("")
-        self.term.type_lines(script.briefing(self.difficulty, self.free), tag="fg",
-                             on_done=self._after_briefing)
+        brief = (script.briefing_guiado(self.free) if self.mode == "guiado"
+                 else script.briefing(self.difficulty, self.free))
+        self.term.type_lines(brief, tag="fg", on_done=self._after_briefing)
 
     def _after_briefing(self):
         self._start_timer()
@@ -110,6 +111,7 @@ class MissionController:
         if self.cfg.modes.engine == "real":
             self._run_preflight()
         self.term.focus_input()
+        self._arm_suggestion()   # guiado: deja 'scan' listo para apretar Enter
 
     # ================= pre-flight (solo modo real) =================
     def _run_preflight(self):
@@ -279,6 +281,8 @@ class MissionController:
                 self.term.writeln(n, tag="white")
             self.state = SCANNED
             self._busy(False)
+            self._narrate("scan")
+            self._arm_suggestion()
             return
         h = self.hosts[i]
         mark = "  <- vos" if h.role == "terminal" else ""
@@ -320,6 +324,8 @@ class MissionController:
             self.term.writeln(n, tag="white")
         self.state = INSPECTED
         self._busy(False)
+        self._narrate("inspect")
+        self._arm_suggestion()
 
     # ================= connect =================
     def _cmd_connect(self, ip, port):
@@ -335,11 +341,43 @@ class MissionController:
             lines.append(tip)
         self.term.type_lines(lines, tag="fg")
         self.state = CONNECTED
+        self._narrate("connect")
+        self._arm_suggestion()
 
     # ================= exploit =================
     def _accessible(self):
         """Modos para quien no sabe: no se puede fallar, con show de suspenso."""
         return self.mode in ("guiado", "tarjetas")
+
+    def _lesson_key(self):
+        """Leccion concreta de la ronda ('rotar' se resuelve en otra fase)."""
+        return self.lesson if self.lesson in ("clave", "expuesto", "login") else "clave"
+
+    # ---- modo GUIADO: proximo comando sugerido + narracion en lenguaje simple ----
+    def _suggested_command(self):
+        ip = self.target_ip or (self.target.ip if self.target else "")
+        port = self.cfg.fileserver.http_port
+        secret = self.cfg.fileserver.secret_path
+        return {
+            BRIEFING: "scan",
+            SCANNED: "inspect " + ip,
+            INSPECTED: "connect " + ip + ":" + str(port),
+            CONNECTED: "exploit " + ip,
+            EXPLOITED: "ls",
+            LISTED: "read " + secret,
+        }.get(self.state, "")
+
+    def _arm_suggestion(self):
+        if self.mode != "guiado":
+            return
+        self.term.suggest(self._suggested_command())
+
+    def _narrate(self, step):
+        if self.mode != "guiado":
+            return
+        lines = script.narrate_guiado(step, self._lesson_key())
+        if lines:
+            self.term.write_lines(lines, tag="cyan")
 
     def _cmd_exploit(self, ip, method):
         if not self.free and not self.hosts:
@@ -395,6 +433,9 @@ class MissionController:
                 self.term.writeln("")
                 self.term.writeln(n, tag="white")
         self._busy(False)
+        if res.success:
+            self._narrate("exploit")
+            self._arm_suggestion()
 
     # ================= ping =================
     def _cmd_ping(self, ip):
@@ -522,9 +563,13 @@ class MissionController:
             n = script.nudge(self.difficulty, "found_restricted")
             if n:
                 self.term.writeln(n, tag="white")
+        was_exploited = self.state == EXPLOITED
         if self.state == EXPLOITED:
             self.state = LISTED
         self._busy(False)
+        if was_exploited:
+            self._narrate("ls")
+        self._arm_suggestion()
 
     def _cmd_read(self, path):
         if not self.session_ip:
@@ -617,6 +662,12 @@ class MissionController:
 
     def _show_hint(self):
         if self.state in (WAITING, DONE):
+            return
+        if self.mode == "guiado":
+            self.term.writeln("Pista: apreta  ENTER  para el paso que quedo listo aca abajo.",
+                              tag="amber")
+            self._arm_suggestion()
+            self._arm_hint()
             return
         text = script.hint_for(self.difficulty, self.state)
         if text:

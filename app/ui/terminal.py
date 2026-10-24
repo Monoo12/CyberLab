@@ -66,6 +66,10 @@ class TerminalPanel(tk.Frame):
         self.entry = tk.Entry(prow, bg=theme.BG, fg=theme.WHITE, insertbackground=theme.GREEN,
                               font=(mono_font, 13), bd=0, highlightthickness=0)
         self.entry.pack(side="left", fill="x", expand=True, ipady=6)
+        # Pista del modo guiado: "Enter para ejecutar" cuando hay un comando sugerido.
+        self.suggest_hint = tk.Label(prow, text="", bg=theme.BG, fg=theme.CYAN,
+                                     font=(mono_font, 11, "bold"))
+        self.suggest_hint.pack(side="right", padx=8)
         self.entry.bind("<Return>", self._submit)
         self.entry.bind("<Up>", self._history_prev)
         self.entry.bind("<Down>", self._history_next)
@@ -140,6 +144,23 @@ class TerminalPanel(tk.Frame):
         self.text.delete("1.0", "end")
         self.text.config(state="disabled")
 
+    def suggest(self, cmd: str) -> None:
+        """Modo GUIADO: deja el proximo comando ya escrito y SELECCIONADO en el input.
+        Enter lo ejecuta tal cual; si el visitante escribe algo, reemplaza la seleccion
+        (comportamiento nativo del Entry). Mata las dos barreras: teclear y no saber que sigue."""
+        if not cmd:
+            return
+        try:
+            self.entry.config(state="normal")
+            self.entry.delete(0, "end")
+            self.entry.insert(0, cmd)
+            self.entry.select_range(0, "end")
+            self.entry.icursor("end")
+            self.suggest_hint.config(text="Enter para ejecutar  ▶")
+            self.entry.focus_set()
+        except Exception:
+            pass
+
     def set_input_enabled(self, enabled: bool) -> None:
         self.entry.config(state="normal" if enabled else "disabled")
 
@@ -154,6 +175,7 @@ class TerminalPanel(tk.Frame):
             return "break"
         line = self.entry.get()
         self.entry.delete(0, "end")
+        self.suggest_hint.config(text="")
         if line.strip() and (not self._history or self._history[-1] != line):
             self._history.append(line)
         self._hist_idx = None
