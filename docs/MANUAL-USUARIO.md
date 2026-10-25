@@ -64,8 +64,8 @@ accesibilidad: de "no sé nada" a "sé de redes".
 8. **Mission Complete**: resumen + explicación.
    - **Enter** (o clic) → jugar de nuevo. **M** → volver al menú (cambiar dificultad).
 
-**Otros comandos** en la terminal: `ping <ip>`, `pwd`, `whoami`, `clear`, `menu`. `connect <ip>` sin
-puerto abre el **80** (http) por defecto.
+**Otros comandos** en la terminal: `ping <ip>`, `pwd`, `whoami`, `clear`, `menu`. `connect` **requiere el
+puerto** (`connect <ip>:80`); sin puerto avisa con un mensaje claro (hay que elegir a qué servicio entrar).
 **Recon extra** (desde nivel **Medio**, y en Modo Libre — en **Fácil no aparecen**): `telnet <ip> [puerto]`,
 `traceroute <ip>`, `arp`, `netstat`, e `inspect -v <ip>` (versiones de servicios).
 

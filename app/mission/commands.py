@@ -105,10 +105,11 @@ class CommandParser:
         m = re.fullmatch(rf"connect\s+{_IP}[:\s]+(\d{{1,5}})", low)
         if m:
             return self._make_connect(m.group(1), m.group(2))
-        # connect <ip>  (sin puerto -> 80 http por defecto, para no frustrar)
+        # connect <ip> sin puerto -> hay que aclararlo (mensaje claro, no "no reconocido")
         m = re.fullmatch(rf"connect\s+{_IP}", low)
         if m:
-            return self._make_connect(m.group(1), "80")
+            return ParsedCommand("connect",
+                                 error="falta el puerto:  connect <ip>:<puerto>   (ej. :80 para la web)")
 
         # ping <ip>  (127.0.0.1 y broadcast pasan: tienen easter egg en el backend)
         m = re.fullmatch(rf"ping\s+(?:-[a-z]\s+\d+\s+)?{_IP}", low)
