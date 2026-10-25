@@ -32,13 +32,15 @@ DONE = "done"
 
 class MissionController:
     def __init__(self, root, cfg, backend, terminal, netmap, leds,
-                 show_waiting, show_mission, on_return_menu=None, on_timer=None):
+                 show_waiting, show_mission, on_return_menu=None, on_timer=None,
+                 suspense=None):
         self.root = root
         self.cfg = cfg
         self.backend = backend
         self.term = terminal
         self.netmap = netmap
         self.leds = leds
+        self.suspense = suspense     # overlay cinematografico (modos accesibles)
         self.show_waiting = show_waiting
         self.show_mission = show_mission
         self.on_return_menu = on_return_menu
@@ -46,6 +48,9 @@ class MissionController:
 
         self.parser = CommandParser(cfg.network.cidr)
         self.difficulty = cfg.modes.difficulty
+        self.mode = cfg.modes.mode          # tarjetas | guiado | experto | reto
+        self.lesson = cfg.modes.lesson      # rotar | clave | expuesto | login
+        self._round = 0                     # para rotar la leccion entre rondas
         self.free = cfg.modes.free_mode
         self.available = available_commands(self.difficulty, self.free)
         self.state = WAITING
@@ -70,6 +75,8 @@ class MissionController:
     def enter_waiting(self):
         self.state = WAITING
         self._cancel_timers()
+        if self.suspense:
+            self.suspense.stop()
         try:
             self.backend.close_browser()
         except Exception:
@@ -82,6 +89,7 @@ class MissionController:
 
     def start_mission(self):
         self.state = BRIEFING
+        self.lesson = self._resolve_lesson()   # rota por ronda si lesson='rotar'
         self.access = False
         self.sessions = set()
         self.session_ip = None
@@ -95,8 +103,9 @@ class MissionController:
         self.term.clear()
         self.term.write_lines(script.BANNER.splitlines(), tag="banner")
         self.term.writeln("")
-        self.term.type_lines(script.briefing(self.difficulty, self.free), tag="fg",
-                             on_done=self._after_briefing)
+        brief = (script.briefing_guiado(self.free) if self.mode == "guiado"
+                 else script.briefing(self.difficulty, self.free))
+        self.term.type_lines(brief, tag="fg", on_done=self._after_briefing)
 
     def _after_briefing(self):
         self._start_timer()
@@ -104,6 +113,7 @@ class MissionController:
         if self.cfg.modes.engine == "real":
             self._run_preflight()
         self.term.focus_input()
+        self._arm_suggestion()   # guiado: deja 'scan' listo para apretar Enter
 
     # ================= pre-flight (solo modo real) =================
     def _run_preflight(self):
@@ -133,6 +143,8 @@ class MissionController:
         """Detiene el controller (pump/timers) al volver al menu o cerrar."""
         self._alive = False
         self._cancel_timers()
+        if self.suspense:
+            self.suspense.stop()
         try:
             self.backend.close_browser()
         except Exception:
@@ -162,12 +174,14 @@ class MissionController:
             self.term.writeln("[!] " + pc.error, tag="red")
             if self.difficulty != "dificil":
                 self.term.writeln("    escribi 'help' para ver los comandos.", tag="dim")
+            self.leds.animate_all(seg.ANIM_ERROR)   # flash rojo: algo salio mal
             return
 
         # gating por dificultad: los comandos extra no estan en nivel Facil
         if pc.name in EXTRA_COMMANDS and pc.name not in self.available:
             self.term.writeln("[!] '" + pc.name + "' no esta disponible en nivel Facil.", tag="amber")
             self.term.writeln("    subi a Medio/Dificil/Pro o activa Modo Libre.", tag="dim")
+            self.leds.animate_all(seg.ANIM_ERROR)
             return
 
         handlers = {
@@ -194,6 +208,10 @@ class MissionController:
         h = handlers.get(pc.name)
         if h:
             h()
+        # Ack minimo en el tablero para los comandos locales (sin red): un blip en
+        # el primer nodo, asi CUALQUIER comando mueve algo en los LEDs.
+        if pc.name in ("help", "hint", "clear", "pwd", "whoami"):
+            self.leds.animate_node(0, seg.ANIM_BLIP)
 
     # ================= comandos informativos =================
     def _cmd_help(self):
@@ -265,6 +283,8 @@ class MissionController:
                 self.term.writeln(n, tag="white")
             self.state = SCANNED
             self._busy(False)
+            self._narrate("scan")
+            self._arm_suggestion()
             return
         h = self.hosts[i]
         mark = "  <- vos" if h.role == "terminal" else ""
@@ -306,6 +326,8 @@ class MissionController:
             self.term.writeln(n, tag="white")
         self.state = INSPECTED
         self._busy(False)
+        self._narrate("inspect")
+        self._arm_suggestion()
 
     # ================= connect =================
     def _cmd_connect(self, ip, port):
@@ -321,8 +343,62 @@ class MissionController:
             lines.append(tip)
         self.term.type_lines(lines, tag="fg")
         self.state = CONNECTED
+        self._narrate("connect")
+        self._arm_suggestion()
 
     # ================= exploit =================
+    def _accessible(self):
+        """Modos para quien no sabe: no se puede fallar, con show de suspenso."""
+        return self.mode in ("guiado", "tarjetas")
+
+    _ROTATION = ("clave", "expuesto", "login")
+    _LESSON_METHOD = {"clave": "hydra", "expuesto": "leak", "login": "sqli"}
+
+    def _resolve_lesson(self):
+        """Leccion concreta de esta ronda. 'rotar' cicla clave->expuesto->login."""
+        base = self.cfg.modes.lesson
+        if base in self._ROTATION:
+            return base
+        lesson = self._ROTATION[self._round % len(self._ROTATION)]
+        self._round += 1
+        return lesson
+
+    def _lesson_key(self):
+        return self.lesson if self.lesson in self._ROTATION else "clave"
+
+    def _lesson_method(self):
+        """Via del backend que ilustra la leccion (clave->hydra, expuesto->leak, login->sqli)."""
+        return self._LESSON_METHOD.get(self._lesson_key(), "hydra")
+
+    # ---- modo GUIADO: proximo comando sugerido + narracion en lenguaje simple ----
+    def _suggested_command(self):
+        ip = self.target_ip or (self.target.ip if self.target else "")
+        port = self.cfg.fileserver.http_port
+        secret = self.cfg.fileserver.secret_path
+        return {
+            BRIEFING: "scan",
+            SCANNED: "inspect " + ip,
+            INSPECTED: "connect " + ip + ":" + str(port),
+            CONNECTED: "exploit " + ip,
+            EXPLOITED: "ls",
+            LISTED: "read " + secret,
+        }.get(self.state, "")
+
+    def _arm_suggestion(self):
+        if self.mode != "guiado":
+            return
+        # Guiado-Facil: el comando queda listo (Enter). Guiado-Medio (o mas): aparece en
+        # fantasma y hay que escribirlo si o si.
+        require_typing = self.difficulty != "facil"
+        self.term.suggest(self._suggested_command(), require_typing=require_typing)
+
+    def _narrate(self, step):
+        if self.mode != "guiado":
+            return
+        lines = script.narrate_guiado(step, self._lesson_key())
+        if lines:
+            self.term.write_lines(lines, tag="cyan")
+
     def _cmd_exploit(self, ip, method):
         if not self.free and not self.hosts:
             self.term.writeln("[!] Primero descubri la red (scan).", tag="amber")
@@ -334,10 +410,28 @@ class MissionController:
         method = method or "hydra"
         host = self.cfg.host_by_ip(ip)
         role = host.role if host else "unknown"
+        self.target_ip = ip
+
+        # Modos accesibles: el "golpe 2" es el show de suspenso que termina en exito.
+        # La via usada coincide con la leccion de la ronda (clave/expuesto/login).
+        if self._accessible() and self.suspense is not None:
+            acc_method = self._lesson_method()
+            if self.netmap and role != "unknown":
+                self.netmap.pulse_role(role, times=10, color=theme.AMBER)
+            self._busy(True)
+            self.suspense.play(
+                role, self.lesson,
+                on_done=lambda: self._async(lambda: self.backend.exploit(ip, acc_method),
+                                            self._exploit_done))
+            return
+
         if self.netmap and role != "unknown":
             self.netmap.pulse_role(role, times=10, color=theme.AMBER)
+        # Exploit mas "vivo": pulso rojo por el camino + caos (glitch) en los nodos
+        # (los switches/router "reventados" mientras corre el ataque).
         self.leds.animate_segments(seg.segments_for_role(role), seg.ANIM_EXPLOIT)
-        self.target_ip = ip
+        for node_id in seg.NODE_LEDS:
+            self.leds.animate_node(node_id, seg.ANIM_GLITCH)
         self._busy(True)
         self.term.type_lines([
             script.RUN_EXPLOIT.format(method=method, ip=ip),
@@ -365,6 +459,9 @@ class MissionController:
                 self.term.writeln("")
                 self.term.writeln(n, tag="white")
         self._busy(False)
+        if res.success:
+            self._narrate("exploit")
+            self._arm_suggestion()
 
     # ================= ping =================
     def _cmd_ping(self, ip):
@@ -372,13 +469,19 @@ class MissionController:
         if host and self.netmap:
             self.netmap.focus_role(host.role)
         if host:
-            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_FOCUS)
+            # eco que viaja hasta el host y vuelve por cada tramo del camino
+            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_PING)
+        elif ip == "127.0.0.1":
+            self.leds.animate_segment(0, seg.ANIM_PING)        # a vos mismo (terminal)
+        elif ip == "255.255.255.255" or ip.endswith(".255"):
+            self.leds.animate_all(seg.ANIM_PING)               # broadcast: toda la red
         self._busy(True)
         self._async(lambda: self.backend.ping(ip), self._ping_done)
 
     def _ping_done(self, lines):
         self.term.write_lines(lines, tag="fg")
         self._busy(False)
+        self._arm_suggestion()   # guiado: volver a ofrecer el proximo paso
 
     # ================= recon extra (telnet/traceroute/arp/netstat) =========
     def _cmd_telnet(self, ip, port):
@@ -386,7 +489,8 @@ class MissionController:
         if host and self.netmap:
             self.netmap.focus_role(host.role)
         if host:
-            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_FOCUS)
+            # "golpear la puerta": escaneo/flicker sobre el camino al host
+            self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_SCAN)
         self._busy(True)
         self._async(lambda: self.backend.telnet(ip, port), self._recon_done)
 
@@ -412,18 +516,24 @@ class MissionController:
 
     def _cmd_arp(self):
         ips = [h.ip for h in self.hosts] or [h.ip for h in self.cfg.hosts]
+        # "quien es quien en la red": titilan los nodos (switches + router)
+        for node_id in seg.NODE_LEDS:
+            self.leds.animate_node(node_id, seg.ANIM_PROCESS)
         self._busy(True)
         self._async(lambda: self.backend.arp(ips), self._recon_done)
 
     def _cmd_netstat(self):
         ip = self.session_ip or (self.cfg.host_by_role("terminal").ip
                                  if self.cfg.host_by_role("terminal") else "127.0.0.1")
+        # tus propias conexiones: pulso en tu tramo (el de la terminal, seg 0)
+        self.leds.animate_segment(0, seg.ANIM_PING)
         self._busy(True)
         self._async(lambda: self.backend.netstat(ip), self._recon_done)
 
     def _recon_done(self, lines):
         self.term.write_lines(lines, tag="fg")
         self._busy(False)
+        self._arm_suggestion()   # guiado: volver a ofrecer el proximo paso
 
     # ================= filesystem (cd / ls / read) =================
     def _resolve(self, path):
@@ -452,15 +562,26 @@ class MissionController:
         if ok:
             self.cwd = target
             self.term.writeln("  -> " + target, tag="dim")
+            segs = self._session_segments()
+            if segs:
+                self.leds.animate_segment(segs[-1], seg.ANIM_BLIP)  # blip al cambiar de carpeta
         else:
             self.term.writeln("[!] No existe el directorio: " + target, tag="amber")
+            self.leds.animate_all(seg.ANIM_ERROR)
         self._busy(False)
+
+    def _session_segments(self):
+        """Tramos LED hacia el host donde tenes shell (para feedback de ls/cd)."""
+        host = self.cfg.host_by_ip(self.session_ip) if self.session_ip else None
+        return seg.segments_for_role(host.role) if host else []
 
     def _cmd_ls(self, path):
         if not self.session_ip:
             self._no_access()
             return
         target = self._resolve(path)
+        # leyendo el directorio: shimmer corto sobre el tramo del servidor
+        self.leds.animate_segments(self._session_segments(), seg.ANIM_BLIP)
         self._busy(True)
         self._async(lambda: self.backend.ls(self.session_ip, target), self._ls_done)
 
@@ -474,9 +595,13 @@ class MissionController:
             n = script.nudge(self.difficulty, "found_restricted")
             if n:
                 self.term.writeln(n, tag="white")
+        was_exploited = self.state == EXPLOITED
         if self.state == EXPLOITED:
             self.state = LISTED
         self._busy(False)
+        if was_exploited:
+            self._narrate("ls")
+        self._arm_suggestion()
 
     def _cmd_read(self, path):
         if not self.session_ip:
@@ -505,10 +630,11 @@ class MissionController:
         if not self.free and target.rstrip("/").endswith("secret.txt") \
                 and self.session_ip == self.cfg.fileserver.ip:
             self.root.after(1200, self._complete)
-        elif self.free and got_flag:
+        elif got_flag:
             self.term.writeln("")
             self.term.writeln("[+] FLAG capturada. Segui explorando otros hosts o 'menu' para salir.",
                               tag="white")
+            self._arm_suggestion()
 
     # ================= fin =================
     def _complete(self):
@@ -569,6 +695,12 @@ class MissionController:
 
     def _show_hint(self):
         if self.state in (WAITING, DONE):
+            return
+        if self.mode == "guiado":
+            self.term.writeln("Pista: apreta  ENTER  para el paso que quedo listo aca abajo.",
+                              tag="amber")
+            self._arm_suggestion()
+            self._arm_hint()
             return
         text = script.hint_for(self.difficulty, self.state)
         if text:

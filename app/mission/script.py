@@ -63,6 +63,89 @@ def briefing(difficulty: str, free: bool = False) -> list[str]:
     return base
 
 
+def briefing_guiado(free: bool = False) -> list[str]:
+    """Briefing del modo GUIADO: lenguaje simple, sin jerga, para el que no sabe."""
+    return [
+        "[ MISION ]  Tenes que recuperar un archivo secreto que alguien escondio",
+        "en un servidor de esta red.",
+        "",
+        "Tranqui: no hace falta saber de computacion. En cada paso te dejamos el",
+        "proximo comando YA ESCRITO aca abajo -- solo apreta  ENTER.",
+        "Y mira el tablero de luces: te muestra como viaja la informacion.",
+        "",
+        "Listo el primer paso. Apreta  ENTER  para escanear la red.",
+        "",
+    ]
+
+
+# ------------- NARRACION del modo GUIADO (lenguaje de todos los dias) --------
+# Explica, despues de cada paso, QUE hiciste y por que importa. Deja enseñanza.
+_GUIADO_STEPS = {
+    "scan": [
+        "",
+        ">> Eso fue un ESCANEO. Le preguntaste a cada aparato de la red si estaba",
+        "   prendido, y te contestaron. Asi, de un vistazo, se ve TODO lo que hay",
+        "   conectado. (mira como se encendio el tablero)",
+    ],
+    "inspect": [
+        "",
+        ">> Miraste que 'puertas' tiene abiertas el servidor. Cada puerta abierta",
+        "   es una forma de entrar... y una que conviene cerrar si no se usa.",
+    ],
+    "connect": [
+        "",
+        ">> Abriste la pagina del servidor, como cualquiera. Pero vas a mirar mas",
+        "   de lo que muestra a simple vista.",
+    ],
+    "ls": [
+        "",
+        ">> Estas paseando por las carpetas del servidor como si fuera tu compu.",
+        "   Lo mas valioso suele estar donde dice 'restringido'.",
+    ],
+}
+# Enseñanza del 'ENTRAR' segun la leccion de la ronda (se rota en otra fase).
+_GUIADO_EXPLOIT = {
+    "clave": [
+        "",
+        ">> ENTRASTE. Lo que viste recien es real: una clave debil (1234, admin)",
+        "   se adivina probando miles por segundo. Por eso una contrasena LARGA y",
+        "   distinta en cada sitio es tu mejor defensa.",
+    ],
+    "expuesto": [
+        "",
+        ">> ENTRASTE. La clave estaba 'a la vista', escondida en el codigo de la",
+        "   pagina. Nunca pongas datos sensibles donde cualquiera pueda mirarlos.",
+    ],
+    "login": [
+        "",
+        ">> ENTRASTE. Un truco en el formulario hizo que el sistema te dejara pasar",
+        "   sin la clave. Los programas hay que escribirlos para no caer en trucos.",
+    ],
+}
+
+
+def narrate_guiado(step: str, lesson: str = "clave") -> list[str]:
+    if step == "exploit":
+        key = lesson if lesson in _GUIADO_EXPLOIT else "clave"
+        return list(_GUIADO_EXPLOIT[key])
+    return list(_GUIADO_STEPS.get(step, []))
+
+
+# Enseñanza concisa para la pantalla final del modo TARJETAS (una frase).
+TARJETAS_TAKEAWAY = {
+    "clave": "Lo que pasa de verdad: una clave facil (1234, admin) se adivina en "
+             "segundos. Usa contrasenas largas y distintas en cada sitio.",
+    "expuesto": "Lo que pasa de verdad: la clave estaba a la vista, escondida en el "
+                "codigo de la pagina. No publiques datos sensibles online.",
+    "login": "Lo que pasa de verdad: un truco en el formulario abrio la puerta sin la "
+             "clave. Por eso los sistemas hay que programarlos con cuidado.",
+}
+
+
+def tarjetas_takeaway(lesson: str) -> str:
+    return TARJETAS_TAKEAWAY.get(lesson, TARJETAS_TAKEAWAY["clave"])
+
+
 MISSION_COMPLETE = [
     "",
     "================  MISSION COMPLETE  ================",

@@ -159,6 +159,8 @@ class NetworkMapPanel(tk.Frame):
         links = _links_for_role(role)
 
         def step(i):
+            if not self.winfo_exists():   # panel destruido (volver al menu): cortar
+                return
             on = i % 2 == 0
             col = color if on else theme.LINK_IDLE
             w = 5 if on else 3

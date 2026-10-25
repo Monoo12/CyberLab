@@ -12,6 +12,18 @@ fallback en vivo).
 > **¿Armás el lab desde cero?** Guía visual paso a paso (LEDs, servidores, red y config):
 > **https://monoo12.github.io/CyberLab/docs/ARMADO.html**
 
+## Modos de juego
+
+El operador elige el modo en el menú, según el público. Es una rampa de accesibilidad:
+
+- 🟦 **Tarjetas** — sin teclado, un botón grande por paso; para quien no sabe nada de redes. No se puede perder.
+- 🟩 **Guiado** — la terminal, pero con el próximo comando ya escrito (un Enter) y narración simple.
+- 🟥 **Experto** — la terminal real con sus 4 dificultades (el modo clásico).
+- 🧩 **Reto** — escape room: acertijos con cronómetro donde el tablero y los componentes dan las pistas.
+
+En Tarjetas/Guiado el acceso siempre se logra (con un "suspenso" cinematográfico) y la **lección** rota
+clave débil → dato expuesto → truco en el login. Detalle completo del diseño: [docs/REDISEÑO.md](docs/REDISEÑO.md).
+
 ## Componentes
 
 | Carpeta | Qué es |
@@ -33,7 +45,7 @@ python -m app.main --engine simulated
 Se abre el menú de setup (panel visual, motor Real/Simulado, dificultad Fácil/Medio/Difícil) y luego la
 misión. `F11` alterna pantalla completa; `Esc` sale de pantalla completa.
 
-Flags útiles: `--autostart` (salta el menú, modo kiosco), `--difficulty medio`, `--free` (modo libre), `--no-visual`.
+Flags útiles: `--mode tarjetas|guiado|experto|reto`, `--lesson clave|expuesto|login|rotar`, `--autostart` (salta el menú, modo kiosco), `--difficulty medio`, `--free` (modo libre), `--no-visual`.
 
 ## Instalacion en Linux (scripts)
 

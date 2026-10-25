@@ -19,6 +19,10 @@
  *   PIX:<rangos>:<anim>   -> anima solo esos LEDs y apaga el resto
  *   ADD:<rangos>:<anim>   -> anima esos LEDs sin tocar el resto
  *   <anim>   = DISCOVER | FOCUS | EXPLOIT | TRANSFER | PROCESS | IDLE | OFF
+ *              | PING (eco que va y vuelve) | SCAN (escaneo de puertos, flicker)
+ *              | BLIP (ack rapido de un comando) | ERROR (flash rojo)
+ *              PING/SCAN/BLIP/ERROR son TRANSITORIAS: animan un rato y despues
+ *              vuelven solas al estado que tenia la zona (como PROCESS).
  *   <rangos> = LEDs sueltos o rangos inclusivos separados por coma, contando
  *              desde 0 en el extremo de la TERMINAL. Ej: PIX:0-9,40-50:FOCUS
  *   SEG/ALL/NODE/IDLE/OFF vuelven al modo tramos (borran los rangos de PIX/ADD).
@@ -91,7 +95,10 @@ const bool STRIP_REVERSED = false;
 // --- Estados de animacion ---------------------------------------------------
 // (los tipos van antes de cualquier funcion: el IDE de Arduino genera los
 // prototipos arriba de la primera funcion y tienen que conocer Zone)
-enum Anim { A_OFF = 0, A_IDLE, A_DISCOVER, A_FOCUS, A_EXPLOIT, A_TRANSFER, A_PROCESS };
+// Las TRANSITORIAS (A_PROCESS..A_ERROR) animan un rato y vuelven a z.next.
+// A_GLITCH es SOSTENIDA (como EXPLOIT/FOCUS): corre hasta que se cambie la zona.
+enum Anim { A_OFF = 0, A_IDLE, A_DISCOVER, A_FOCUS, A_EXPLOIT, A_TRANSFER,
+            A_PROCESS, A_PING, A_SCAN, A_BLIP, A_ERROR, A_GLITCH };
 
 // Una zona es un rango de LEDs que se anima como una unidad.
 struct Zone {
@@ -125,11 +132,19 @@ void setAnim(Zone& z, uint8_t a) {
   z.t0 = millis();
 }
 
-// Titila y despues vuelve a la anim que tenia antes.
-void startProcess(Zone& z) {
-  if (z.anim != A_PROCESS) z.next = z.anim;
-  setAnim(z, A_PROCESS);
+// Las animaciones transitorias se ejecutan un rato y despues vuelven a z.next.
+bool isTransient(uint8_t a) {
+  return a == A_PROCESS || a == A_PING || a == A_SCAN || a == A_BLIP || a == A_ERROR;
 }
+
+// Arranca una anim transitoria recordando a donde volver (el estado previo, salvo
+// que ya fuera transitorio). Al terminar, renderZone hace setAnim(z, z.next).
+void startTransient(Zone& z, uint8_t a) {
+  if (!isTransient(z.anim)) z.next = z.anim;
+  setAnim(z, a);
+}
+
+void startProcess(Zone& z) { startTransient(z, A_PROCESS); }
 
 void setAllZones(uint8_t a) {
   pixCount = 0;  // volver al modo tramos
@@ -140,12 +155,14 @@ void setAllZones(uint8_t a) {
 // Anima el tramo b. Si termina en un nodo, el nodo "procesa" (titila) y despues
 // queda como el tramo. Con OFF/IDLE el nodo copia el estado sin titilar.
 void animBranch(int b, uint8_t a) {
-  if (a == A_PROCESS) startProcess(branches[b]);
+  if (isTransient(a)) startTransient(branches[b], a);
   else setAnim(branches[b], a);
   if (b >= NUM_NODES) return;
   Zone& n = nodes[b];
   if (a == A_OFF || a == A_IDLE) { setAnim(n, a); return; }
-  if (a == A_PROCESS) { startProcess(n); return; }
+  // Con una anim transitoria el nodo la acompana y vuelve a lo previo; con una
+  // sostenida titila ("procesando") y queda como el tramo.
+  if (isTransient(a)) { startTransient(n, a); return; }
   n.next = (a == A_DISCOVER) ? A_FOCUS : a;
   setAnim(n, A_PROCESS);
 }
@@ -254,6 +271,58 @@ void renderZone(Zone& z) {
       if (el >= NODE_PROCESS_MS) { setAnim(z, z.next); break; }
       fill_solid(px, n, ((el / NODE_BLINK_MS) & 1) ? CRGB::Black : C_WHITE);
       break;
+
+    case A_PING: {
+      // Eco: un punto cyan va de la terminal al final del tramo y vuelve, una vez.
+      const uint32_t D = 900;
+      if (el >= D) { setAnim(z, z.next); break; }
+      uint32_t half = D / 2;
+      int head = (el < half) ? (int)((el * (n - 1)) / half)
+                             : (int)(((D - el) * (n - 1)) / half);   // ida y vuelta
+      for (int i = 0; i < n; i++) {
+        int d = head - i; if (d < 0) d = -d;
+        px[i] = (d == 0) ? C_CYAN : (d == 1) ? CRGB(0, 60, 60) : CRGB::Black;
+      }
+      break;
+    }
+
+    case A_SCAN: {
+      // Escaneo de puertos: flicker ambar/verde por toda la zona y vuelve a z.next.
+      const uint32_t D = 1100;
+      if (el >= D) { setAnim(z, z.next); break; }
+      for (int i = 0; i < n; i++) {
+        uint8_t r = random8();
+        px[i] = (r > 180) ? C_AMBER : (r > 110 ? CRGB(50, 35, 0) : CRGB::Black);
+      }
+      break;
+    }
+
+    case A_BLIP: {
+      // Ack breve: un destello verde que sube y baja. Reacciona a cualquier comando.
+      const uint32_t D = 260;
+      if (el >= D) { setAnim(z, z.next); break; }
+      uint8_t w = quadwave8((uint8_t)((el * 255) / D));
+      fill_solid(px, n, blend(CRGB::Black, C_GREEN, w));
+      break;
+    }
+
+    case A_ERROR: {
+      // Error: parpadeo rojo un par de veces y vuelve a z.next.
+      const uint32_t D = 700;
+      if (el >= D) { setAnim(z, z.next); break; }
+      fill_solid(px, n, ((el / 120) & 1) ? CRGB::Black : C_RED);
+      break;
+    }
+
+    case A_GLITCH: {
+      // Caos de intrusion (SOSTENIDA): cada LED un color aleatorio, refresco rapido,
+      // sobre una base roja -> sensacion de sistema "reventado" mientras corre el ataque.
+      for (int i = 0; i < n; i++) {
+        if (random8() < 90) px[i] = CRGB(random8(), random8(), random8());
+        else                px[i] = blend(CRGB(40, 0, 0), C_RED, random8());
+      }
+      break;
+    }
   }
 }
 
@@ -263,6 +332,11 @@ uint8_t animFromToken(const String& t) {
   if (t == "EXPLOIT")  return A_EXPLOIT;
   if (t == "TRANSFER") return A_TRANSFER;
   if (t == "PROCESS")  return A_PROCESS;
+  if (t == "PING")     return A_PING;
+  if (t == "SCAN")     return A_SCAN;
+  if (t == "BLIP")     return A_BLIP;
+  if (t == "ERROR")    return A_ERROR;
+  if (t == "GLITCH")   return A_GLITCH;
   if (t == "IDLE")     return A_IDLE;
   return A_OFF;
 }
@@ -315,7 +389,7 @@ void handleLine(String line) {
     if (isNode) {
       if (id < 0 || id >= NUM_NODES) return;
       pixCount = 0;
-      if (a == A_PROCESS) startProcess(nodes[id]);
+      if (isTransient(a)) startTransient(nodes[id], a);
       else setAnim(nodes[id], a);
     } else {
       if (id < 0 || id >= NUM_BRANCHES) return;

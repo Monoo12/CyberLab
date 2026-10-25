@@ -64,6 +64,16 @@ llegan hasta el switch-der y el último salto se ve solo en el mapa de la pantal
 | `EXPLOIT` | Ataque en curso | pulso rápido ámbar/intenso |
 | `TRANSFER` | Transferencia de datos (flag/archivo) | chase rápido cyan |
 | `PROCESS` | Un nodo procesa (switch/router) | titila blanco ~2,5 s y vuelve a como estaba |
+| `PING` | Eco de un `ping` | punto cyan que va hasta el final del tramo y vuelve, una vez |
+| `SCAN` | Golpear un puerto (`telnet`) | flicker ámbar/verde un ~1 s |
+| `BLIP` | Ack breve de un comando | destello verde corto que sube y baja |
+| `ERROR` | Comando inválido / fallo | parpadeo rojo un par de veces |
+| `GLITCH` | Caos durante el exploit (**sostenida**) | cada LED un color al azar sobre base roja; "sistema reventado" |
+
+> `PING`, `SCAN`, `BLIP` y `ERROR` son **transitorias**: animan un rato y después vuelven **solas** al
+> estado que tenía la zona (como `PROCESS`). Se agregaron para que **todos** los comandos muevan el
+> tablero. **Requieren reflashear el ESP** con el `.ino` nuevo; con firmware viejo, el micro ignora el
+> token (lo trata como `OFF`).
 
 ## 4. Protocolo serial (una línea por comando, `\n`, 115200 baud)
 
@@ -94,18 +104,27 @@ segmento** de la ruta (no hay un comando "multi-segmento").
 | `scan` — al descubrir cada host | ruta(role) de **cada** host, uno por uno | `DISCOVER` | `SEG:0:DISCOVER`, `SEG:1:DISCOVER`, … (por host, escalonado ~420 ms) |
 | `inspect <ip>` | ruta(role del ip) | `FOCUS` | `SEG:0:FOCUS` … `SEG:3:FOCUS` (ej. fileserver) |
 | `connect <ip:puerto>` | ruta(role del ip) | `FOCUS` | idem inspect |
-| `ping <ip>` | ruta(role del ip) | `FOCUS` | idem |
-| `telnet <ip> <puerto>` | ruta(role del ip) | `FOCUS` | idem |
+| `ping <ip>` | ruta(role del ip) | `PING` | `SEG:0:PING` … (eco que va y vuelve por cada tramo) |
+| `telnet <ip> <puerto>` | ruta(role del ip) | `SCAN` | `SEG:0:SCAN` … (flicker, "golpear la puerta") |
+| `arp` | los 3 nodos | `PROCESS` | `NODE:0:PROCESS` `NODE:1:PROCESS` `NODE:2:PROCESS` |
+| `netstat` | tramo propio (terminal) | `PING` | `SEG:0:PING` |
+| `ls` (tras acceso) | ruta(role del host actual) | `BLIP` | `SEG:…:BLIP` |
+| `cd` (tras acceso) | último tramo del host | `BLIP` | `SEG:3:BLIP` (ej. fileserver) |
 | `traceroute <ip>` | ruta(role del ip), **salto por salto** | `DISCOVER` | `SEG:0:DISCOVER` → (350 ms) `SEG:1:DISCOVER` → `SEG:2:DISCOVER` → `SEG:3:DISCOVER` |
 | `exploit <ip>` — mientras corre | ruta(role del ip) | `EXPLOIT` | `SEG:0:EXPLOIT` … `SEG:3:EXPLOIT` |
 | `exploit <ip>` — al lograr acceso | ruta(role del ip) | `FOCUS` | idem con `FOCUS` |
 | `read` de una FLAG / `secret.txt` | ruta(role del host actual) | `TRANSFER` | `SEG:…:TRANSFER` |
+| comando local (`pwd`/`whoami`/`help`/`hint`/`clear`) | nodo 0 | `BLIP` | `NODE:0:BLIP` |
+| comando inválido / gating | todos | `ERROR` | `ALL:ERROR` |
 | **Mission Complete** | todas | `TRANSFER` | `ALL:TRANSFER` |
 | Reset / volver a espera | todas | `IDLE` | `IDLE` |
 | Volver al menú / apagar | todas | `OFF` | `OFF` |
 
-**Comandos que NO tocan los LEDs:** `arp`, `netstat`, `pwd`, `whoami`, `ls`, `cd`, `help`, `hint`,
-`clear`, `menu`, e `inspect -v` (misma animación que `inspect`).
+**Ya no hay comandos "mudos":** cada comando mueve algo en el tablero (ver filas de arriba). `inspect -v`
+usa la misma animación que `inspect`. En los modos **tarjetas/guiado**, el "golpe 2" (entrar) lo anima
+el overlay de suspenso (`EXPLOIT` → `ERROR` → `TRANSFER`); en **reto**, las pistas usan
+`NODE:*:PROCESS` (contar nodos), `BLIP` repetido en el router (contar destellos) y `DISCOVER` salto por
+salto (seguir la señal).
 
 ### Ejemplo real (secuencia de una misión al FILE-SERVER)
 ```
@@ -125,9 +144,13 @@ ALL:TRANSFER                 (Mission Complete)
 
 ## 6. Notas para el firmware
 
-- El `.ino` ya implementa `IDLE/OFF/SEG/ALL/PIX/ADD` y las 4 animaciones (no bloqueantes con
-  `millis()`). Cada tramo y cada rango de `PIX`/`ADD` es una "zona" que se anima por su cuenta (el
-  barrido y el chase recorren solo esa zona).
+- El `.ino` implementa `IDLE/OFF/SEG/ALL/NODE/PIX/ADD` y las animaciones
+  `DISCOVER/FOCUS/EXPLOIT/TRANSFER/PROCESS` + las transitorias `PING/SCAN/BLIP/ERROR` (no bloqueantes
+  con `millis()`). Cada tramo y cada rango de `PIX`/`ADD` es una "zona" que se anima por su cuenta.
+- **Reflasheo:** las animaciones `PING/SCAN/BLIP/ERROR` son nuevas. Después de actualizar el `.ino` hay
+  que **volver a cargar el firmware al ESP** (`arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 ...`
+  y `upload`, ver `docs/GUIA-HARDWARE.md`). Con firmware viejo esos comandos dejan el tramo en negro en
+  vez de animar (no rompe nada, solo se ve pobre).
 - **`DISCOVER` termina en tenue y `FOCUS` en fijo**: es intencional — tras el barrido, el tramo queda
   suave; el foco lo pinta más fuerte cuando es el objetivo.
 - La app manda **un `SEG:` por segmento**; el firmware anima cada tramo de forma independiente, así que

@@ -3,7 +3,8 @@
 Uso:
     python -m app.main                      (usa config.toml)
     python -m app.main --engine simulated   (override del motor)
-    python -m app.main --level advanced --no-visual
+    python -m app.main --mode guiado        (modo de juego: tarjetas|guiado|experto|reto)
+    python -m app.main --difficulty medio --no-visual
     python -m app.main --autostart          (salta el menu; modo kiosco)
 """
 from __future__ import annotations

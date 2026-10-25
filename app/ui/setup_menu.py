@@ -16,6 +16,11 @@ _DIFF_LABELS = {"Facil": "facil", "Medio": "medio", "Dificil": "dificil", "Pro":
 _DIFF_LABELS_INV = {v: k for k, v in _DIFF_LABELS.items()}
 _VISUAL_LABELS = {"Encendido": True, "Apagado": False}
 _VISUAL_LABELS_INV = {True: "Encendido", False: "Apagado"}
+_MODE_LABELS = {"Tarjetas": "tarjetas", "Guiado": "guiado", "Experto": "experto", "Reto": "reto"}
+_MODE_LABELS_INV = {v: k for k, v in _MODE_LABELS.items()}
+_LESSON_LABELS = {"Rotar": "rotar", "Clave debil": "clave",
+                  "Dato expuesto": "expuesto", "Truco login": "login"}
+_LESSON_LABELS_INV = {v: k for k, v in _LESSON_LABELS.items()}
 
 
 class SetupMenu(ctk.CTkFrame):
@@ -43,6 +48,20 @@ class SetupMenu(ctk.CTkFrame):
                          font=("Consolas", 34, "bold")), pady=(30, 2))
         add(ctk.CTkLabel(wrap, text="Configuracion de la estacion", text_color=theme.DIM,
                          font=("Consolas", 14)), pady=(0, 22))
+
+        # --- Modo de juego (el operador lo fija segun el visitante) ---
+        add(ctk.CTkLabel(wrap, text="Modo de juego", text_color=theme.FG,
+                         font=("Consolas", 15), anchor="w"), pady=(6, 4))
+        self.mode_seg = ctk.CTkSegmentedButton(
+            wrap, values=list(_MODE_LABELS.keys()), height=44,
+            font=("Consolas", 16, "bold"), selected_color=theme.CYAN,
+            selected_hover_color=theme.CYAN, command=self._on_mode_change)
+        self.mode_seg.set(_MODE_LABELS_INV.get(cfg.modes.mode, "Experto"))
+        add(self.mode_seg, pady=(0, 4))
+        add(ctk.CTkLabel(
+            wrap,
+            text="Tarjetas: sin teclado   Guiado: un Enter   Experto: terminal real   Reto: escape room",
+            text_color=theme.DIM, font=("Consolas", 11), anchor="w"), pady=(0, 14))
 
         # --- Panel visual ---
         add(ctk.CTkLabel(wrap, text="Panel visual (mapa de red)", text_color=theme.FG,
@@ -75,8 +94,18 @@ class SetupMenu(ctk.CTkFrame):
         add(self.diff_seg, pady=(0, 4))
         add(ctk.CTkLabel(
             wrap,
-            text="Facil: comando+IP   Medio: por concepto   Dificil: comandos reales   Pro: solo",
+            text="Experto: Facil->Pro (cuanto te guia).   Guiado: Facil=auto-Enter, Medio=escribir el comando.",
             text_color=theme.DIM, font=("Consolas", 11), anchor="w"), pady=(0, 12))
+
+        # --- Leccion (solo tarjetas/guiado) ---
+        add(ctk.CTkLabel(wrap, text="Leccion (tarjetas / guiado)", text_color=theme.FG,
+                         font=("Consolas", 15), anchor="w"), pady=(6, 4))
+        self.lesson_seg = ctk.CTkSegmentedButton(
+            wrap, values=list(_LESSON_LABELS.keys()), height=40,
+            font=("Consolas", 14), selected_color=theme.CYAN,
+            selected_hover_color=theme.CYAN)
+        self.lesson_seg.set(_LESSON_LABELS_INV.get(cfg.modes.lesson, "Rotar"))
+        add(self.lesson_seg, pady=(0, 14))
 
         # --- Modo libre ---
         add(ctk.CTkLabel(wrap, text="Modo libre (tiempo infinito, todo hackeable)",
@@ -102,6 +131,8 @@ class SetupMenu(ctk.CTkFrame):
                               command=self._start)
         add(start, pady=(14, 30))
 
+        self._on_mode_change()  # estado inicial de dificultad/leccion segun el modo
+
     def _toggle_leds(self):
         if self.leds is None:
             return
@@ -119,9 +150,24 @@ class SetupMenu(ctk.CTkFrame):
         except Exception:
             pass
 
+    def _on_mode_change(self, value=None):
+        """Habilita solo los controles que aplican al modo elegido:
+        dificultad -> solo EXPERTO; leccion -> solo TARJETAS/GUIADO."""
+        mode = _MODE_LABELS.get(self.mode_seg.get(), "experto")
+        # La dificultad aplica a EXPERTO (facil->pro) y a GUIADO (facil=auto, medio=escribir).
+        diff_state = "normal" if mode in ("experto", "guiado") else "disabled"
+        lesson_state = "normal" if mode in ("tarjetas", "guiado") else "disabled"
+        for widget, state in ((self.diff_seg, diff_state), (self.lesson_seg, lesson_state)):
+            try:
+                widget.configure(state=state)
+            except Exception:
+                pass
+
     def _start(self):
         self.cfg.modes.visual = _VISUAL_LABELS.get(self.visual_seg.get(), True)
         self.cfg.modes.engine = _ENGINE_LABELS.get(self.engine_seg.get(), "simulated")
+        self.cfg.modes.mode = _MODE_LABELS.get(self.mode_seg.get(), "experto")
         self.cfg.modes.difficulty = _DIFF_LABELS.get(self.diff_seg.get(), "facil")
+        self.cfg.modes.lesson = _LESSON_LABELS.get(self.lesson_seg.get(), "rotar")
         self.cfg.modes.free_mode = (self.free_seg.get() == "Libre")
         self.on_start()

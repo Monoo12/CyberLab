@@ -10,10 +10,15 @@ import customtkinter as ctk
 from app.backend.simulated import SimulatedBackend
 from app.leds.controller import LedController
 from app.mission.flow import MissionController
+from app.mission.reto_flow import RetoController
+from app.mission.tarjetas_flow import TarjetasController
 from app.ui import theme
 from app.ui.matrix import MatrixRain
 from app.ui.netmap import NetworkMapPanel
+from app.ui.reto import RetoView
 from app.ui.setup_menu import SetupMenu
+from app.ui.suspense import SuspenseOverlay
+from app.ui.tarjetas import TarjetasView
 from app.ui.terminal import TerminalPanel
 
 
@@ -34,6 +39,10 @@ class MissionApp:
         self.root.geometry("1200x760")
         self.root.bind("<F11>", self._toggle_fullscreen)
         self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
+        # Atajo del operador: volver al menu de setup desde cualquier modo (util en
+        # tarjetas/reto, que no tienen comando 'menu'). F5 o Ctrl+M.
+        self.root.bind("<Control-m>", lambda e: self.return_to_setup())
+        self.root.bind("<F5>", lambda e: self.return_to_setup())
         self._fullscreen = False
 
         self.mono = theme.pick_mono(self.root)
@@ -62,9 +71,10 @@ class MissionApp:
         self._build_mission()
 
     def return_to_setup(self):
-        """Vuelve al menu de configuracion (comando 'menu' o [M] al terminar)."""
-        if self.controller:
-            self.controller.shutdown()
+        """Vuelve al menu de configuracion (comando 'menu', [M] al terminar, o Ctrl+M)."""
+        if self.controller is None:
+            return   # ya estamos en el menu (p.ej. Ctrl+M en setup): no hacer nada
+        self.controller.shutdown()
         try:
             self.matrix.unbind_keys(self.root)
             self.matrix.stop()
@@ -94,8 +104,12 @@ class MissionApp:
         top = ctk.CTkFrame(self.mission_frame, fg_color=theme.BG, height=34)
         top.pack(fill="x", side="top")
         engine_txt = "SIMULADO" if self.cfg.modes.engine == "simulated" else "REAL"
-        ctk.CTkLabel(top, text="  CYBER LAB   //   motor: " + engine_txt +
-                     "   //   dificultad: " + self.cfg.modes.difficulty.upper() +
+        mode_txt = self.cfg.modes.mode.upper()
+        # la dificultad solo aplica al modo EXPERTO
+        extra = ("   //   dificultad: " + self.cfg.modes.difficulty.upper()
+                 if self.cfg.modes.mode == "experto" else "")
+        ctk.CTkLabel(top, text="  CYBER LAB   //   modo: " + mode_txt +
+                     "   //   motor: " + engine_txt + extra +
                      "   //   'menu' para volver",
                      text_color=theme.DIM, font=(self.mono, 12)).pack(side="left")
         self.timer_label = ctk.CTkLabel(top, text="TIEMPO 05:00", text_color=theme.GREEN,
@@ -105,24 +119,53 @@ class MissionApp:
         body = ctk.CTkFrame(self.mission_frame, fg_color=theme.BG)
         body.pack(fill="both", expand=True)
 
-        self.terminal = TerminalPanel(body, self.mono, cps=self.cfg.timing.typewriter_cps)
-        if self.cfg.modes.visual:
+        # Vista principal segun el modo: tarjetas / reto (sin teclado) o terminal.
+        mode = self.cfg.modes.mode
+        self.terminal = None
+        self.cards = None
+        self.reto = None
+        if mode == "tarjetas":
+            self.cards = TarjetasView(body, self.mono)
+            self.cards.pack(side="left", fill="both", expand=True)
+        elif mode == "reto":
+            self.reto = RetoView(body, self.mono)
+            self.reto.pack(side="left", fill="both", expand=True)
+        else:
+            self.terminal = TerminalPanel(body, self.mono, cps=self.cfg.timing.typewriter_cps)
             self.terminal.pack(side="left", fill="both", expand=True)
+        if self.cfg.modes.visual:
             self.netmap = NetworkMapPanel(body, self.cfg, self.mono)
             self.netmap.configure(width=460)
             self.netmap.pack(side="right", fill="both", expand=False)
             self.netmap.pack_propagate(False)
-        else:
-            self.terminal.pack(fill="both", expand=True)
+
+        # Overlay de suspenso (modos accesibles): cubre la vista de mision cuando juega
+        self.suspense = SuspenseOverlay(self.mission_frame, self.mono, self.leds)
 
         # Vista de espera (matrix)
         self.matrix = MatrixRain(self._container, self.mono, on_key=self._on_matrix_key)
 
-        self.controller = MissionController(
-            self.root, self.cfg, self.backend, self.terminal, self.netmap, self.leds,
-            show_waiting=self._show_waiting, show_mission=self._show_mission,
-            on_return_menu=self.return_to_setup, on_timer=self._on_timer,
-        )
+        if mode == "tarjetas":
+            self.controller = TarjetasController(
+                self.root, self.cfg, self.backend, self.cards, self.netmap, self.leds,
+                show_waiting=self._show_waiting, show_mission=self._show_mission,
+                on_return_menu=self.return_to_setup, on_timer=self._on_timer,
+                suspense=self.suspense,
+            )
+        elif mode == "reto":
+            self.controller = RetoController(
+                self.root, self.cfg, self.backend, self.reto, self.netmap, self.leds,
+                show_waiting=self._show_waiting, show_mission=self._show_mission,
+                on_return_menu=self.return_to_setup, on_timer=self._on_timer,
+                suspense=self.suspense,
+            )
+        else:
+            self.controller = MissionController(
+                self.root, self.cfg, self.backend, self.terminal, self.netmap, self.leds,
+                show_waiting=self._show_waiting, show_mission=self._show_mission,
+                on_return_menu=self.return_to_setup, on_timer=self._on_timer,
+                suspense=self.suspense,
+            )
         self.controller.enter_waiting()
 
     # ------------------------------------------------------------------
@@ -137,14 +180,16 @@ class MissionApp:
         self.matrix.stop()
         self.matrix.pack_forget()
         self.mission_frame.pack(fill="both", expand=True)
-        self.terminal.focus_input()
+        if self.terminal is not None:
+            self.terminal.focus_input()
 
     def _on_matrix_key(self):
         self.controller.on_any_key()
 
     def _on_timer(self, remaining):
-        if remaining is None:   # modo libre: tiempo infinito
-            self.timer_label.configure(text="MODO LIBRE", text_color=theme.CYAN)
+        if remaining is None:   # modo libre o tarjetas: sin cuenta regresiva
+            txt = "MODO TARJETAS" if self.cfg.modes.mode == "tarjetas" else "MODO LIBRE"
+            self.timer_label.configure(text=txt, text_color=theme.CYAN)
             return
         m, s = divmod(max(0, remaining), 60)
         self.timer_label.configure(text="TIEMPO %02d:%02d" % (m, s))

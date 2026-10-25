@@ -68,6 +68,7 @@ class NetworkBackend(ABC):
     # `connect` es identico en ambos motores: abre el navegador real.
     def connect(self, ip: str, port: int):
         url = f"http://{ip}:{port}"
+        self.close_browser()   # no acumular ventanas si se conecta varias veces
         self._browser_proc = open_app_mode(url)
         return url
 
