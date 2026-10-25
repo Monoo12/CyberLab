@@ -40,8 +40,9 @@ class MissionApp:
         self.root.bind("<F11>", self._toggle_fullscreen)
         self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
         # Atajo del operador: volver al menu de setup desde cualquier modo (util en
-        # tarjetas/reto, que no tienen comando 'menu').
+        # tarjetas/reto, que no tienen comando 'menu'). F5 o Ctrl+M.
         self.root.bind("<Control-m>", lambda e: self.return_to_setup())
+        self.root.bind("<F5>", lambda e: self.return_to_setup())
         self._fullscreen = False
 
         self.mono = theme.pick_mono(self.root)

@@ -161,20 +161,51 @@ _LOGIN_HTML = """<!DOCTYPE html>
           padding:11px; font-weight:bold; font-family:inherit; border-radius:4px; }}
  .hint {{ color:#243; font-size:11px; text-align:center; margin-top:18px; }}
  .sim {{ color:#ffb000; font-size:11px; text-align:center; margin-top:8px; }}
+ .msg {{ text-align:center; margin-top:16px; font-size:13px; font-weight:bold;
+        min-height:34px; line-height:1.3; }}
+ .ok {{ color:#39ff14; }}
+ .bad {{ color:#ff4d4d; }}
 </style></head><body>
  <div class="box">
    <h1>{title}</h1>
-   <form onsubmit="return false;">
-     <label>usuario</label><input autocomplete="off" autofocus>
-     <label>clave</label><input type="password" autocomplete="off">
+   <form id="login" onsubmit="return false;">
+     <label>usuario</label><input id="u" autocomplete="off" autofocus>
+     <label>clave</label><input id="p" type="password" autocomplete="off">
      <input type="hidden" id="dev-cred" data-user="{user}" data-pass="{pwd}">
-     <button type="submit">INGRESAR</button>
+     <button id="go" type="submit">INGRESAR</button>
    </form>
+   <div id="msg" class="msg"></div>
    <div class="hint">acceso restringido &bull; solo personal autorizado</div>
    <div class="sim">[ pagina de demostracion - modo simulado ]</div>
  </div>
+ {script}
 </body></html>
 """
+
+# Script del login (fuera del .format: sus llaves JS no se escapan). Valida las
+# credenciales tipeadas contra las que estan ocultas en el HTML, asi el metodo
+# 'leak' manual (Inspeccionar -> copiar user/clave -> Ingresar) DA respuesta.
+_LOGIN_SCRIPT = """<script>
+(function(){
+  var f=document.getElementById('login'),
+      cred=document.getElementById('dev-cred'),
+      msg=document.getElementById('msg');
+  function submit(){
+    var u=document.getElementById('u').value.trim(),
+        p=document.getElementById('p').value;
+    if(u===cred.dataset.user && p===cred.dataset.pass){
+      msg.className='msg ok';
+      msg.innerHTML='ACCESO CONCEDIDO \\u2713<br>Credenciales validas. Volve a la terminal: ya podes entrar al servidor y leer el archivo.';
+    } else {
+      msg.className='msg bad';
+      msg.innerHTML='Credenciales incorrectas.<br>Pista: el usuario y la clave estan en el codigo de la pagina (click derecho &gt; Inspeccionar).';
+    }
+    return false;
+  }
+  f.addEventListener('submit', submit);
+  document.getElementById('go').addEventListener('click', submit);
+})();
+</script>"""
 
 
 def _profile_for(cfg, ip):
@@ -197,7 +228,7 @@ class SimulatedBackend(NetworkBackend):
         host = self.cfg.host_by_ip(ip)
         title = host.name if host else "SERVICIO"
         html = _LOGIN_HTML.format(user=self.cfg.creds.leak_user, pwd=self.cfg.creds.leak_pass,
-                                  title=title)
+                                  title=title, script=_LOGIN_SCRIPT)
         f = Path(tempfile.gettempdir()) / "cyberlab_login.html"
         f.write_text(html, encoding="utf-8")
         self._page_path = f
