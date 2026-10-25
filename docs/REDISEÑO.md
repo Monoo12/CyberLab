@@ -20,7 +20,10 @@ paso**. La solución no es "una terminal más fácil", es ofrecer **modelos de i
 | 🧩 **Reto** | Reto / grupos | Escape room: acertijos con cronómetro; el tablero da las pistas; se elige o se tipea | Sí (se acaba el tiempo) |
 
 El **operador** fija el modo (y la lección) en el menú de setup; no hay pantalla de selección para el
-visitante. El menú habilita solo lo que aplica a cada modo. `Ctrl+M` vuelve al menú desde cualquier modo.
+visitante. El menú habilita solo lo que aplica a cada modo. **`F5`** o **`Ctrl+M`** vuelven al menú desde
+cualquier modo. **Guiado** tiene dos niveles: *Fácil* (el comando viene escrito, Enter) y *Medio* (el
+comando aparece en fantasma pero hay que escribirlo). **Tarjetas** suma interacción: elegir el servidor
+entre los equipos y explorar las carpetas con el mouse para encontrar y abrir el archivo.
 
 ## El recorrido (Tarjetas / Guiado): 3 golpes
 
@@ -41,18 +44,19 @@ DETECTADA". Clímax: casi-fallo en rojo → **ACCESO CONCEDIDO** en verde. LEDs:
 `login` (truco en el formulario → vía *sqli*). Con `rotar`, alterna una por ronda. La vía del backend
 **coincide** con la lección, así la narración, el suspenso y la salida cuentan la misma historia.
 
-## Reto (escape room)
+## Reto (escape room / juego)
 
-4 acertijos (`app/mission/reto_flow.py`) donde el **tablero y los componentes físicos** (router,
-switches, cable/canaleta) son las pistas:
+Objetivo: **tomar el control de la red**. Una barra de CONTROL DE LA RED se llena capturando nodos
+(cada acierto enciende un tramo verde); al 100% = **ACCESO ROOT**. Cronómetro con penalidad por error y
+**rango** final (APRENDIZ / HACKER / HACKER ÉLITE) según errores y tiempo. El tablero y los componentes
+físicos (router, switches, cable/canaleta) son las pistas; botón **PISTA** las repite.
 
-1. Contar los **nodos** que titilan (switches + router).
-2. **El cable roto** — aprovecha el LED 62 quemado como acertijo real del hardware.
-3. Contar los **destellos del router** (se tipea; fresco cada ronda).
-4. **Seguir la señal** por la canaleta hasta el router.
-
-Input mixto (opción múltiple + tipear), cronómetro con penalidad por error y botón **PISTA** que vuelve
-a mostrar la clave en las luces.
+Tipos de acertijo (`app/mission/reto_flow.py` + `app/ui/reto.py`):
+- **Elegir**: contar los nodos que titilan; **el cable roto** (aprovecha el LED 62 quemado como acertijo
+  real del hardware); seguir la señal por la canaleta.
+- **Secuencia (tipo Simon)**: el tablero parpadea un patrón de nodos y hay que repetirlo tocando
+  SW-IZQ / ROUTER / SW-DER (uno corto y el final más largo). La interacción más "juego/hacker".
+- **Keypad**: cargar en pantalla el número de destellos del router.
 
 ## LEDs vivos: todos los comandos animan
 
@@ -64,6 +68,8 @@ previo, como `PROCESS`):
 - `SCAN` — flicker de escaneo de puertos (`telnet`).
 - `BLIP` — ack breve de cualquier comando (`ls`, `cd`, comandos locales).
 - `ERROR` — flash rojo (comando inválido / fallo).
+- `GLITCH` — caos sostenido durante el exploit (cada LED un color al azar sobre base roja); corre en los
+  nodos mientras se fuerza el acceso, en la terminal y en el suspenso.
 
 > **Requiere reflashear el ESP** una vez con el `.ino` nuevo. Con firmware viejo esos tokens se tratan
 > como `OFF` (el tramo queda negro; no rompe nada). Ver [docs/LEDS.md](LEDS.md).

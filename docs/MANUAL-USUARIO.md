@@ -36,12 +36,12 @@ accesibilidad: de "no sé nada" a "sé de redes".
 | **Lección** | *(solo Tarjetas/Guiado)* qué enseñanza se lleva el visitante en el paso de "entrar": **Clave débil**, **Dato expuesto**, **Truco login**, o **Rotar** (una distinta por ronda). |
 | **Panel visual** | On: muestra el mapa de red animado al costado. Off: más liviano. |
 | **Motor** | **Simulado**: nada toca la red real (ensayo o fallback). **Real**: los comandos corren de verdad. |
-| **Dificultad** | *(solo Experto)* **Fácil**: comando + IP. **Medio**: por concepto. **Difícil**: comandos reales (`nmap`, `hydra`, `curl`) sin IP. **Pro**: sin pistas. |
+| **Dificultad** | **Experto**: **Fácil** (comando+IP) → **Medio** (por concepto) → **Difícil** (comandos reales sin IP) → **Pro** (sin pistas).  **Guiado**: **Fácil** = el comando viene escrito y alcanza Enter; **Medio** = el comando aparece en fantasma pero hay que escribirlo. |
 | **Modo libre** | *(Experto/Guiado)* **Misión**: objetivo FILE-SERVER, 5 min. **Libre**: tiempo infinito, todos los dispositivos hackeables (cada uno con su FLAG). |
 
-> El menú **habilita solo lo que aplica** al modo elegido (la dificultad se activa en Experto; la lección,
-> en Tarjetas/Guiado). Para **volver al menú desde cualquier modo**: `Ctrl+M` (o el comando `menu` en la
-> terminal, o `[M]` al terminar).
+> El menú **habilita solo lo que aplica** al modo elegido (la dificultad se activa en Experto y Guiado;
+> la lección, en Tarjetas/Guiado). Para **volver al menú desde cualquier modo**: **`F5`** o **`Ctrl+M`**
+> (o el comando `menu` en la terminal, o `[M]` al terminar).
 
 > En **cualquier** dificultad podés escribir tanto los comandos guiados (`scan`, `inspect <ip>`…)
 > como la sintaxis real de las herramientas (`nmap`, `hydra`, `curl`). La dificultad solo cambia
@@ -73,23 +73,32 @@ accesibilidad: de "no sé nada" a "sé de redes".
 Si el visitante queda inactivo (~40 s configurable), la terminal ofrece una **pista** según el paso
 y la dificultad. También puede escribir `hint` o `help` cuando quiera.
 
-### 3.b. Modo Tarjetas (sin teclado)
+### 3.b. Modo Tarjetas (sin teclado, con interacción)
 
-Un botón grande por paso; el visitante solo toca. Recorrido en 4 toques:
+El visitante **decide tocando**; no escribe nada. Recorrido:
 
-1. **ESCANEAR LA RED** → se encienden los aparatos en el tablero y dice cuántos hay.
-2. **ENTRAR AL SERVIDOR** → arranca el **suspenso** (cuenta regresiva + miles de claves probándose +
-   barra de "intrusión detectada", todo en rojo) y **siempre** termina en *ACCESO CONCEDIDO*; aparece la
-   enseñanza de la lección.
-3. **BUSCAR EL ARCHIVO** → abre las carpetas del servidor.
-4. **LLEVARSE EL SECRETO** → copia el archivo → **Misión cumplida** con la enseñanza. Tocar para jugar de nuevo.
+1. **ESCANEAR LA RED** → se encienden los aparatos en el tablero.
+2. **ELEGIR EL SERVIDOR** → aparecen los equipos encontrados; hay que tocar **cuál guarda los
+   archivos** (el FILE-SERVER). Tocar el equivocado avisa y marca error en el tablero.
+3. **ENTRAR AL SERVIDOR** → arranca el **suspenso** (cuenta regresiva + miles de claves probándose +
+   barra de "intrusión detectada", en rojo) y **siempre** termina en *ACCESO CONCEDIDO*.
+4. **EXPLORAR Y LLEVARSE EL ARCHIVO** → navega las carpetas del servidor **tocando** (abrir carpetas,
+   volver) hasta encontrar y abrir el archivo secreto en la carpeta `restricted`. Abrir el correcto →
+   **Misión cumplida** con la enseñanza. Tocar para jugar de nuevo.
 
-### 3.c. Modo Reto (escape room)
+### 3.c. Modo Reto (escape room / juego)
 
-4 acertijos con un reloj; el **tablero** da las pistas. Se responde eligiendo una opción o tipeando un
-número. Una respuesta equivocada **descuenta tiempo**; el botón **PISTA** vuelve a mostrar la clave en
-las luces. Los acertijos: contar los nodos que titilan, encontrar **el cable roto** (el LED quemado del
-tablero), contar los destellos del **router**, y seguir la señal por la **canaleta** hasta su destino.
+Objetivo: **tomar el control de la red**. Una barra de **CONTROL DE LA RED** se llena a medida que
+capturás nodos; al 100% lográs **ACCESO ROOT**. Hay cronómetro (una respuesta equivocada descuenta
+tiempo) y al final un **RANGO de hacker** (APRENDIZ / HACKER / HACKER ÉLITE) según errores y tiempo. El
+**tablero** da las pistas; el botón **PISTA** las vuelve a mostrar. Tipos de acertijo:
+
+- **Elegir** (opción): contar los nodos que titilan, encontrar **el cable roto** (el LED quemado del
+  tablero), seguir la señal por la **canaleta**.
+- **Secuencia (tipo Simon)**: el tablero parpadea un patrón de nodos y hay que **repetirlo tocando**
+  SW-IZQ / ROUTER / SW-DER en el mismo orden (hay uno corto y el final más largo = ACCESO ROOT).
+- **Keypad**: contar los destellos del **router** y cargar el número en el teclado en pantalla.
+
 Si el reloj llega a 0, no se escapa (tocar para reintentar).
 
 ## 4. Las 3 formas de entrar (chuleta del operador)
