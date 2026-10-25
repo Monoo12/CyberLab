@@ -278,6 +278,11 @@ class TerminalPanel(tk.Frame):
         return "break"
 
     def _blink_prompt(self):
-        cur = self.prompt.cget("fg")
-        self.prompt.config(fg=theme.BG if cur == theme.GREEN else theme.GREEN)
+        if not self.winfo_exists():   # la terminal fue destruida (volver al menu): cortar el loop
+            return
+        try:
+            cur = self.prompt.cget("fg")
+            self.prompt.config(fg=theme.BG if cur == theme.GREEN else theme.GREEN)
+        except Exception:
+            return
         self.after(600, self._blink_prompt)

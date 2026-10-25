@@ -233,6 +233,7 @@ class SimulatedBackend(NetworkBackend):
         f.write_text(html, encoding="utf-8")
         self._page_path = f
         url = f.as_uri()
+        self.close_browser()   # no acumular ventanas si se conecta varias veces
         self._browser_proc = open_app_mode(url)
         return url
 
@@ -330,26 +331,32 @@ class SimulatedBackend(NetworkBackend):
     def exploit(self, ip: str, method: str) -> ExploitResult:
         fs = self.cfg.fileserver
         creds = self.cfg.creds
-        role, prof = _profile_for(self.cfg, ip)
 
         # El FILE-SERVER es el objetivo de la mision: 3 metodos reales.
         if ip == fs.ip:
             return self._exploit_fileserver(method, fs, creds)
 
+        # Solo los equipos REALES de la red responden (no una IP cualquiera del rango).
+        host = self.cfg.host_by_ip(ip)
+        if host is None:
+            time.sleep(0.4)
+            return ExploitResult(False, method, [
+                "[*] Objetivo: " + ip,
+                "[!] No hay ningun equipo en " + ip + " (no responde).",
+            ])
+
+        role, prof = _profile_for(self.cfg, ip)
         # Cualquier dispositivo con perfil vulnerable se puede hackear (cada uno con su
         # propia FLAG): la red entera esta "viva", no solo el objetivo de la mision.
         if prof.get("vuln"):
             time.sleep(0.8)
-            host = self.cfg.host_by_ip(ip)
-            out = ["[*] Objetivo: " + ip + " (" + (host.name if host else ip) + ")"]
+            out = ["[*] Objetivo: " + ip + " (" + host.name + ")"]
             out += prof.get("exploit", ["[+] ACCESO CONCEDIDO"])
             return ExploitResult(True, method, out, prof.get("user"))
 
         time.sleep(0.6)
-        host = self.cfg.host_by_ip(ip)
-        name = host.name if host else ip
         return ExploitResult(False, method, [
-            "[*] Objetivo: " + ip + " (" + name + ")",
+            "[*] Objetivo: " + ip + " (" + host.name + ")",
             "[!] El servicio en " + ip + " no respondio o no es vulnerable.",
         ])
 

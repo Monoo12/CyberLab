@@ -133,7 +133,7 @@ class RetoController:
             self._show_clue(p)
 
     def on_hint(self):
-        if self.state != "playing":
+        if self.state != "playing" or self._locked:
             return
         p = self.puzzles[self.idx]
         self.reto.show_result("Pista: " + p.get("hint", p["clue"]), theme.AMBER)

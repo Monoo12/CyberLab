@@ -481,6 +481,7 @@ class MissionController:
     def _ping_done(self, lines):
         self.term.write_lines(lines, tag="fg")
         self._busy(False)
+        self._arm_suggestion()   # guiado: volver a ofrecer el proximo paso
 
     # ================= recon extra (telnet/traceroute/arp/netstat) =========
     def _cmd_telnet(self, ip, port):
@@ -532,6 +533,7 @@ class MissionController:
     def _recon_done(self, lines):
         self.term.write_lines(lines, tag="fg")
         self._busy(False)
+        self._arm_suggestion()   # guiado: volver a ofrecer el proximo paso
 
     # ================= filesystem (cd / ls / read) =================
     def _resolve(self, path):
@@ -628,10 +630,11 @@ class MissionController:
         if not self.free and target.rstrip("/").endswith("secret.txt") \
                 and self.session_ip == self.cfg.fileserver.ip:
             self.root.after(1200, self._complete)
-        elif self.free and got_flag:
+        elif got_flag:
             self.term.writeln("")
             self.term.writeln("[+] FLAG capturada. Segui explorando otros hosts o 'menu' para salir.",
                               tag="white")
+            self._arm_suggestion()
 
     # ================= fin =================
     def _complete(self):
