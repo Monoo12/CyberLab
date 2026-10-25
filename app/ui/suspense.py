@@ -109,6 +109,8 @@ class SuspenseOverlay(ctk.CTkFrame):
         self.bar.set(0.0)
         self._segs = seg.segments_for_role(self._role) or seg.ALL_SEGMENTS
         self.leds.animate_segments(self._segs, seg.ANIM_EXPLOIT)
+        for node_id in seg.NODE_LEDS:   # caos en los nodos durante el ataque
+            self.leds.animate_node(node_id, seg.ANIM_GLITCH)
         self.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.lift()
         self._frame()

@@ -52,6 +52,7 @@ ANIM_PING = "PING"          # eco que va y vuelve (ping)
 ANIM_SCAN = "SCAN"          # escaneo de puertos (flicker) -- telnet / knock
 ANIM_BLIP = "BLIP"          # ack rapido de cualquier comando (reacciona a todo)
 ANIM_ERROR = "ERROR"        # flash rojo de error (comando invalido / fallo)
+ANIM_GLITCH = "GLITCH"      # caos de intrusion SOSTENIDO (durante el exploit)
 
 
 def segments_for_role(role: str) -> list[int]:

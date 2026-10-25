@@ -427,7 +427,11 @@ class MissionController:
 
         if self.netmap and role != "unknown":
             self.netmap.pulse_role(role, times=10, color=theme.AMBER)
+        # Exploit mas "vivo": pulso rojo por el camino + caos (glitch) en los nodos
+        # (los switches/router "reventados" mientras corre el ataque).
         self.leds.animate_segments(seg.segments_for_role(role), seg.ANIM_EXPLOIT)
+        for node_id in seg.NODE_LEDS:
+            self.leds.animate_node(node_id, seg.ANIM_GLITCH)
         self._busy(True)
         self.term.type_lines([
             script.RUN_EXPLOIT.format(method=method, ip=ip),

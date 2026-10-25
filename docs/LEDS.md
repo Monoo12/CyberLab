@@ -68,6 +68,7 @@ llegan hasta el switch-der y el último salto se ve solo en el mapa de la pantal
 | `SCAN` | Golpear un puerto (`telnet`) | flicker ámbar/verde un ~1 s |
 | `BLIP` | Ack breve de un comando | destello verde corto que sube y baja |
 | `ERROR` | Comando inválido / fallo | parpadeo rojo un par de veces |
+| `GLITCH` | Caos durante el exploit (**sostenida**) | cada LED un color al azar sobre base roja; "sistema reventado" |
 
 > `PING`, `SCAN`, `BLIP` y `ERROR` son **transitorias**: animan un rato y después vuelven **solas** al
 > estado que tenía la zona (como `PROCESS`). Se agregaron para que **todos** los comandos muevan el

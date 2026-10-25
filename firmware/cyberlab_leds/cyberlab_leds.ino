@@ -95,9 +95,10 @@ const bool STRIP_REVERSED = false;
 // --- Estados de animacion ---------------------------------------------------
 // (los tipos van antes de cualquier funcion: el IDE de Arduino genera los
 // prototipos arriba de la primera funcion y tienen que conocer Zone)
-// Las TRANSITORIAS (A_PROCESS en adelante) animan un rato y vuelven a z.next.
+// Las TRANSITORIAS (A_PROCESS..A_ERROR) animan un rato y vuelven a z.next.
+// A_GLITCH es SOSTENIDA (como EXPLOIT/FOCUS): corre hasta que se cambie la zona.
 enum Anim { A_OFF = 0, A_IDLE, A_DISCOVER, A_FOCUS, A_EXPLOIT, A_TRANSFER,
-            A_PROCESS, A_PING, A_SCAN, A_BLIP, A_ERROR };
+            A_PROCESS, A_PING, A_SCAN, A_BLIP, A_ERROR, A_GLITCH };
 
 // Una zona es un rango de LEDs que se anima como una unidad.
 struct Zone {
@@ -312,6 +313,16 @@ void renderZone(Zone& z) {
       fill_solid(px, n, ((el / 120) & 1) ? CRGB::Black : C_RED);
       break;
     }
+
+    case A_GLITCH: {
+      // Caos de intrusion (SOSTENIDA): cada LED un color aleatorio, refresco rapido,
+      // sobre una base roja -> sensacion de sistema "reventado" mientras corre el ataque.
+      for (int i = 0; i < n; i++) {
+        if (random8() < 90) px[i] = CRGB(random8(), random8(), random8());
+        else                px[i] = blend(CRGB(40, 0, 0), C_RED, random8());
+      }
+      break;
+    }
   }
 }
 
@@ -325,6 +336,7 @@ uint8_t animFromToken(const String& t) {
   if (t == "SCAN")     return A_SCAN;
   if (t == "BLIP")     return A_BLIP;
   if (t == "ERROR")    return A_ERROR;
+  if (t == "GLITCH")   return A_GLITCH;
   if (t == "IDLE")     return A_IDLE;
   return A_OFF;
 }
