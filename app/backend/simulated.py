@@ -255,6 +255,21 @@ class SimulatedBackend(NetworkBackend):
     # ------------------------------ ping ---------------------------------
     def ping(self, ip: str) -> list[str]:
         time.sleep(0.4)
+        # --- easter eggs ---
+        if ip == "127.0.0.1":
+            return [
+                "PING 127.0.0.1 (localhost): te estas pingeando a VOS MISMO.",
+                "64 bytes desde 127.0.0.1: la llamada viene de adentro de la casa...",
+                "64 bytes desde 127.0.0.1: si, sos vos. Hola :)",
+                "--- no hay a donde escapar de uno mismo: 100% recibido ---",
+            ]
+        if ip == "255.255.255.255" or ip.endswith(".255"):
+            out = [f"PING {ip} (broadcast): le preguntaste a TODA la red a la vez.",
+                   "Respondieron todos los equipos:"]
+            for h in self.cfg.hosts:
+                out.append(f"  reply desde {h.ip.ljust(15)} ({h.name})")
+            out.append("--- gritar en una sala llena: usa esto con cuidado ;) ---")
+            return out
         host = self.cfg.host_by_ip(ip)
         if host is None:
             return [f"ping: {ip} no responde (host desconocido)"]
@@ -316,14 +331,14 @@ class SimulatedBackend(NetworkBackend):
         fs = self.cfg.fileserver
         creds = self.cfg.creds
         role, prof = _profile_for(self.cfg, ip)
-        free = getattr(self.cfg.modes, "free_mode", False)
 
         # El FILE-SERVER es el objetivo de la mision: 3 metodos reales.
         if ip == fs.ip:
             return self._exploit_fileserver(method, fs, creds)
 
-        # Fuera de la mision, solo en MODO LIBRE los demas son hackeables.
-        if free and prof.get("vuln"):
+        # Cualquier dispositivo con perfil vulnerable se puede hackear (cada uno con su
+        # propia FLAG): la red entera esta "viva", no solo el objetivo de la mision.
+        if prof.get("vuln"):
             time.sleep(0.8)
             host = self.cfg.host_by_ip(ip)
             out = ["[*] Objetivo: " + ip + " (" + (host.name if host else ip) + ")"]
@@ -333,11 +348,10 @@ class SimulatedBackend(NetworkBackend):
         time.sleep(0.6)
         host = self.cfg.host_by_ip(ip)
         name = host.name if host else ip
-        extra = [] if free else ["[i] (En la mision el objetivo es el FILE-SERVER. Proba Modo Libre para hackear otros.)"]
         return ExploitResult(False, method, [
             "[*] Objetivo: " + ip + " (" + name + ")",
             "[!] El servicio en " + ip + " no respondio o no es vulnerable.",
-        ] + extra)
+        ])
 
     def _exploit_fileserver(self, method, fs, creds) -> ExploitResult:
         if method == "leak":

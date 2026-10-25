@@ -471,6 +471,10 @@ class MissionController:
         if host:
             # eco que viaja hasta el host y vuelve por cada tramo del camino
             self.leds.animate_segments(seg.segments_for_role(host.role), seg.ANIM_PING)
+        elif ip == "127.0.0.1":
+            self.leds.animate_segment(0, seg.ANIM_PING)        # a vos mismo (terminal)
+        elif ip == "255.255.255.255" or ip.endswith(".255"):
+            self.leds.animate_all(seg.ANIM_PING)               # broadcast: toda la red
         self._busy(True)
         self._async(lambda: self.backend.ping(ip), self._ping_done)
 

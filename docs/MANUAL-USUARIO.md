@@ -64,9 +64,17 @@ accesibilidad: de "no sé nada" a "sé de redes".
 8. **Mission Complete**: resumen + explicación.
    - **Enter** (o clic) → jugar de nuevo. **M** → volver al menú (cambiar dificultad).
 
-**Otros comandos** en la terminal: `ping <ip>`, `pwd`, `whoami`, `clear`, `menu`.
+**Otros comandos** en la terminal: `ping <ip>`, `pwd`, `whoami`, `clear`, `menu`. `connect <ip>` sin
+puerto abre el **80** (http) por defecto.
 **Recon extra** (desde nivel **Medio**, y en Modo Libre — en **Fácil no aparecen**): `telnet <ip> [puerto]`,
 `traceroute <ip>`, `arp`, `netstat`, e `inspect -v <ip>` (versiones de servicios).
+
+> **La red entera está viva:** `exploit` funciona contra **cualquier** dispositivo con perfil (router,
+> workstation, security-server…), no solo el FILE-SERVER; cada uno tiene su propia FLAG. El objetivo de
+> la misión sigue siendo leer el secreto del FILE-SERVER.
+>
+> **Easter eggs:** `ping 127.0.0.1` (te pingeás a vos mismo) y `ping` a un **broadcast**
+> (`192.168.10.255`) tienen respuestas escondidas.
 
 **Como consola real:** **TAB** autocompleta comandos, IPs y rutas; **↑/↓** navegan el historial; **Ctrl+L** limpia.
 
@@ -113,7 +121,7 @@ El objetivo es el login del FILE-SERVER. Hay **tres** maneras de vencerlo; con c
 3. **Fuerza bruta (Hydra)** — `exploit <ip> hydra` prueba un mini-diccionario hasta acertar. En Difícil/Pro
    se escribe el comando `hydra ...` real.
 
-`exploit <ip>` requiere la IP del objetivo; sin método usa el default (hydra). Métodos: `exploit <ip> leak | sqli | hydra`. Atacar la IP equivocada falla (no es vulnerable).
+`exploit <ip>` requiere la IP del objetivo; sin método usa el default (hydra). Métodos: `exploit <ip> leak | sqli | hydra`. Funciona contra cualquier dispositivo con perfil vulnerable (cada uno con su FLAG); solo la terminal del visitante no es hackeable.
 
 ## 5. Reset entre visitantes
 

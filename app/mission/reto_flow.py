@@ -232,13 +232,13 @@ class RetoController:
             self.reto.show_result("Ahora repetilo tocando los nodos en ese orden.", theme.AMBER)
             return
         self.leds.animate_node(_NODE_ID[seq[i]], seg.ANIM_BLIP)
-        self._clue_job = self.root.after(700, lambda: self._flash_sequence(seq, i + 1))
+        self._clue_job = self.root.after(520, lambda: self._flash_sequence(seq, i + 1))
 
     # ================= datos de los acertijos =================
     def _build_puzzles(self):
-        flashes = random.randint(3, 6)
-        seq1 = [random.choice(_SEQ_KEYS) for _ in range(3)]
-        seq2 = [random.choice(_SEQ_KEYS) for _ in range(4)]
+        flashes = random.randint(4, 8)
+        seq1 = [random.choice(_SEQ_KEYS) for _ in range(4)]
+        seq2 = [random.choice(_SEQ_KEYS) for _ in range(6)]
         return [
             {"type": "choice", "led": "count_nodes",
              "q": "El tablero cuenta los equipos clave. Cuantos NODOS (switches + router) titilan?",

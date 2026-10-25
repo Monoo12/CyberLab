@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import posixpath
 import queue
+import random
 import threading
 
 from app.leds import segments as seg
@@ -138,10 +139,11 @@ class TarjetasController:
 
     def _render_pick(self):
         items = [{"label": h.name, "key": h.role} for h in self.hosts]
+        random.shuffle(items)   # que no quede siempre en el mismo lugar
         self.cards.render_grid(
             "MIRAR",
-            "Encontramos %d equipos. Cual guarda archivos? Toca el SERVIDOR de archivos."
-            % len(self.hosts),
+            "Encontramos %d equipos conectados. En cual te parece que estan guardados los "
+            "archivos? Tocalo." % len(self.hosts),
             items, badge="PASO 2 DE 4")
 
     def _choice_pick(self, role):
@@ -151,7 +153,8 @@ class TarjetasController:
             self._render_enter()
         else:
             self.leds.animate_all(seg.ANIM_ERROR)
-            self.cards.show_result("Ese no guarda los archivos. Busca el FILE-SERVER.", theme.AMBER)
+            self.cards.show_result("Ahi no. Fijate cual suena a 'guardar archivos' por su nombre.",
+                                   theme.AMBER)
 
     # ================= ENTRAR: suspenso =================
     def _render_enter(self):
