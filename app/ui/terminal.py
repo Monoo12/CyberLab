@@ -39,6 +39,8 @@ class TerminalPanel(tk.Frame):
         self._history = []                  # comandos enviados (historial)
         self._hist_idx = None               # posicion al navegar con flechas
         self._draft = ""                    # lo tipeado antes de entrar al historial
+        self._is_placeholder = False        # guiado-medio: el comando esta en fantasma
+        self._placeholder = ""
 
         self.text = tk.Text(
             self,
@@ -75,6 +77,8 @@ class TerminalPanel(tk.Frame):
         self.entry.bind("<Down>", self._history_next)
         self.entry.bind("<Tab>", self._autocomplete)
         self.entry.bind("<Control-l>", lambda e: (self.clear(), "break")[1])
+        # guiado-medio: al tipear, el comando fantasma se borra y escribe el visitante
+        self.entry.bind("<Key>", self._on_key_ghost)
 
         # Tags de color
         self.text.tag_config("fg", foreground=theme.FG)
@@ -140,26 +144,64 @@ class TerminalPanel(tk.Frame):
             except Exception:
                 pass
         self._typing = False
+        self._is_placeholder = False
+        self._placeholder = ""
         self.text.config(state="normal")
         self.text.delete("1.0", "end")
         self.text.config(state="disabled")
+        try:
+            self.entry.delete(0, "end")
+            self.entry.config(fg=theme.WHITE)
+            self.suggest_hint.config(text="")
+        except Exception:
+            pass
 
-    def suggest(self, cmd: str) -> None:
-        """Modo GUIADO: deja el proximo comando ya escrito y SELECCIONADO en el input.
-        Enter lo ejecuta tal cual; si el visitante escribe algo, reemplaza la seleccion
-        (comportamiento nativo del Entry). Mata las dos barreras: teclear y no saber que sigue."""
+    def suggest(self, cmd: str, require_typing: bool = False) -> None:
+        """Modo GUIADO: muestra el proximo comando en el input.
+        - require_typing=False (FACIL): el comando queda escrito y SELECCIONADO; Enter lo
+          ejecuta tal cual (o el visitante escribe y reemplaza la seleccion).
+        - require_typing=True (MEDIO): el comando aparece en FANTASMA (gris); hay que
+          escribirlo si o si (Enter sobre el fantasma no hace nada; al tipear se borra)."""
         if not cmd:
             return
         try:
             self.entry.config(state="normal")
             self.entry.delete(0, "end")
-            self.entry.insert(0, cmd)
-            self.entry.select_range(0, "end")
-            self.entry.icursor("end")
-            self.suggest_hint.config(text="Enter para ejecutar  ▶")
+            if require_typing:
+                self._placeholder = cmd
+                self._is_placeholder = True
+                self.entry.config(fg=theme.DIM)
+                self.entry.insert(0, cmd)
+                self.entry.icursor(0)
+                self.suggest_hint.config(text="escribi el comando  ✎")
+            else:
+                self._is_placeholder = False
+                self.entry.config(fg=theme.WHITE)
+                self.entry.insert(0, cmd)
+                self.entry.select_range(0, "end")
+                self.entry.icursor("end")
+                self.suggest_hint.config(text="Enter para ejecutar  ▶")
             self.entry.focus_set()
         except Exception:
             pass
+
+    def _clear_ghost(self):
+        """Borra el comando fantasma (guiado-medio) y deja el input listo para tipear."""
+        self._is_placeholder = False
+        self._placeholder = ""
+        try:
+            self.entry.delete(0, "end")
+            self.entry.config(fg=theme.WHITE)
+        except Exception:
+            pass
+
+    def _on_key_ghost(self, evt):
+        # Solo actua con el fantasma activo y ante una tecla "de escritura"
+        # (caracter imprimible o Backspace); ignora modificadores/navegacion.
+        if not self._is_placeholder:
+            return
+        if evt.keysym == "BackSpace" or (evt.char and evt.char.isprintable()):
+            self._clear_ghost()   # el caracter tipeado lo inserta el binding de clase (input vacio)
 
     def set_input_enabled(self, enabled: bool) -> None:
         self.entry.config(state="normal" if enabled else "disabled")
@@ -173,6 +215,8 @@ class TerminalPanel(tk.Frame):
     def _submit(self, _evt=None):
         if self._typing:
             return "break"
+        if self._is_placeholder:
+            return "break"   # guiado-medio: fantasma sin tipear -> no ejecutar nada
         line = self.entry.get()
         self.entry.delete(0, "end")
         self.suggest_hint.config(text="")
@@ -186,6 +230,8 @@ class TerminalPanel(tk.Frame):
 
     # -------------------- historial (flechas arriba/abajo) --------------------
     def _history_prev(self, _evt=None):
+        if self._is_placeholder:
+            self._clear_ghost()
         if not self._history:
             return "break"
         if self._hist_idx is None:
@@ -213,6 +259,8 @@ class TerminalPanel(tk.Frame):
 
     # -------------------- autocompletado (TAB) --------------------
     def _autocomplete(self, _evt=None):
+        if self._is_placeholder:
+            return "break"   # guiado-medio: Tab no acepta el fantasma; hay que escribir
         if self.completer is None or self._typing:
             return "break"
         text = self.entry.get()

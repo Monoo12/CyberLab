@@ -94,7 +94,7 @@ class SetupMenu(ctk.CTkFrame):
         add(self.diff_seg, pady=(0, 4))
         add(ctk.CTkLabel(
             wrap,
-            text="Facil: comando+IP   Medio: por concepto   Dificil: comandos reales   Pro: solo",
+            text="Experto: Facil->Pro (cuanto te guia).   Guiado: Facil=auto-Enter, Medio=escribir el comando.",
             text_color=theme.DIM, font=("Consolas", 11), anchor="w"), pady=(0, 12))
 
         # --- Leccion (solo tarjetas/guiado) ---
@@ -154,7 +154,8 @@ class SetupMenu(ctk.CTkFrame):
         """Habilita solo los controles que aplican al modo elegido:
         dificultad -> solo EXPERTO; leccion -> solo TARJETAS/GUIADO."""
         mode = _MODE_LABELS.get(self.mode_seg.get(), "experto")
-        diff_state = "normal" if mode == "experto" else "disabled"
+        # La dificultad aplica a EXPERTO (facil->pro) y a GUIADO (facil=auto, medio=escribir).
+        diff_state = "normal" if mode in ("experto", "guiado") else "disabled"
         lesson_state = "normal" if mode in ("tarjetas", "guiado") else "disabled"
         for widget, state in ((self.diff_seg, diff_state), (self.lesson_seg, lesson_state)):
             try:

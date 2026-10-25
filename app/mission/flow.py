@@ -387,7 +387,10 @@ class MissionController:
     def _arm_suggestion(self):
         if self.mode != "guiado":
             return
-        self.term.suggest(self._suggested_command())
+        # Guiado-Facil: el comando queda listo (Enter). Guiado-Medio (o mas): aparece en
+        # fantasma y hay que escribirlo si o si.
+        require_typing = self.difficulty != "facil"
+        self.term.suggest(self._suggested_command(), require_typing=require_typing)
 
     def _narrate(self, step):
         if self.mode != "guiado":
