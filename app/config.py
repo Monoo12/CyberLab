@@ -35,6 +35,7 @@ class Modes:
     free_mode: bool = False  # tiempo infinito, sin orden, todos los dispositivos hackeables
     mode: str = "experto"    # tarjetas | guiado | experto | reto (como juega el visitante)
     lesson: str = "rotar"    # rotar | clave | expuesto | login (solo tarjetas/guiado)
+    fullscreen: bool = False # true = la ventana arranca en pantalla completa (kiosco)
 
 
 @dataclass
@@ -129,6 +130,7 @@ def load_config(path: str | Path | None = None, argv: list[str] | None = None) -
         free_mode=bool(m.get("free_mode", False)),
         mode=str(m.get("mode", "experto")),
         lesson=str(m.get("lesson", "rotar")),
+        fullscreen=bool(m.get("fullscreen", False)),
     )
     t = raw.get("timing", {})
     timing = Timing(
@@ -191,6 +193,7 @@ def _apply_cli_overrides(cfg: Config, argv: list[str] | None) -> None:
     parser.add_argument("--visual", action="store_true")
     parser.add_argument("--autostart", action="store_true")
     parser.add_argument("--menu", action="store_true", help="forzar el menu de setup")
+    parser.add_argument("--fullscreen", action="store_true", help="arrancar en pantalla completa")
     parser.add_argument("--free", action="store_true", help="modo libre (tiempo infinito)")
     args, _ = parser.parse_known_args(argv)
 
@@ -210,6 +213,8 @@ def _apply_cli_overrides(cfg: Config, argv: list[str] | None) -> None:
         cfg.modes.autostart = True
     if args.menu:
         cfg.modes.autostart = False
+    if args.fullscreen:
+        cfg.modes.fullscreen = True
     if args.free:
         cfg.modes.free_mode = True
 
