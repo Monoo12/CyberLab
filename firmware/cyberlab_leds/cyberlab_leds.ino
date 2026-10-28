@@ -19,9 +19,11 @@
  *   PIX:<rangos>:<anim>   -> anima solo esos LEDs y apaga el resto
  *   ADD:<rangos>:<anim>   -> anima esos LEDs sin tocar el resto
  *   <anim>   = DISCOVER | FOCUS | EXPLOIT | TRANSFER | PROCESS | IDLE | OFF
+ *              | GLITCH (caos en los nodos durante el ataque) | WIN (fiesta de colores)
  *              | PING (eco que va y vuelve) | SCAN (escaneo de puertos, flicker)
  *              | BLIP (ack rapido de un comando) | ERROR (flash rojo)
- *              PING/SCAN/BLIP/ERROR son TRANSITORIAS: animan un rato y despues
+ *              | OPEN (abrir carpeta: colores rapidos + degrade amarillo->verde)
+ *              PING/SCAN/BLIP/ERROR/OPEN son TRANSITORIAS: animan un rato y despues
  *              vuelven solas al estado que tenia la zona (como PROCESS).
  *   <rangos> = LEDs sueltos o rangos inclusivos separados por coma, contando
  *              desde 0 en el extremo de la TERMINAL. Ej: PIX:0-9,40-50:FOCUS
@@ -98,7 +100,7 @@ const bool STRIP_REVERSED = false;
 // Las TRANSITORIAS (A_PROCESS..A_ERROR) animan un rato y vuelven a z.next.
 // A_GLITCH es SOSTENIDA (como EXPLOIT/FOCUS): corre hasta que se cambie la zona.
 enum Anim { A_OFF = 0, A_IDLE, A_DISCOVER, A_FOCUS, A_EXPLOIT, A_TRANSFER,
-            A_PROCESS, A_PING, A_SCAN, A_BLIP, A_ERROR, A_GLITCH };
+            A_PROCESS, A_PING, A_SCAN, A_BLIP, A_ERROR, A_GLITCH, A_OPEN, A_WIN };
 
 // Una zona es un rango de LEDs que se anima como una unidad.
 struct Zone {
@@ -107,6 +109,7 @@ struct Zone {
   uint8_t  anim;
   uint8_t  next;   // a que anim pasa cuando termina PROCESS
   uint32_t t0;
+  bool     node;   // LED de un switch/router: las animaciones le dan su acento propio
 };
 
 CRGB leds[MAX_LEDS];
@@ -123,7 +126,14 @@ const CRGB C_AMBER = CRGB(255, 150, 0);
 const CRGB C_CYAN  = CRGB(40, 220, 220);
 const CRGB C_WHITE = CRGB(255, 255, 255);
 const CRGB C_RED   = CRGB(255, 20, 10);
-const CRGB C_REDHOT = CRGB(255, 70, 30);
+const CRGB C_FOCUS = CRGB(20, 120, 30);
+const CRGB C_HOT   = CRGB(255, 230, 170);  // blanco caliente (cabeza de las rafagas)
+
+// FOCUS: ms que tarda el barrido de entrada en avanzar un LED, y velocidad/pausa del
+// pulso de datos que despues recorre la ruta (en LEDs de "hueco" entre pulsos).
+#define FOCUS_WIPE_MS_PER_LED  9
+#define FOCUS_PULSE_MS_PER_LED 13
+#define FOCUS_PULSE_GAP        34
 
 String rx;  // buffer de linea
 
@@ -132,13 +142,31 @@ void setAnim(Zone& z, uint8_t a) {
   z.t0 = millis();
 }
 
+// Como setAnim pero "ya asentada": salta la entrada de la anim (p.ej. el barrido de
+// FOCUS). Se usa al volver de una transitoria o al terminar DISCOVER/PROCESS, para
+// que el tramo no se apague y vuelva a barrer cada vez.
+void settle(Zone& z, uint8_t a) {
+  setAnim(z, a);
+  z.t0 -= 60000UL;
+}
+
+// Pseudo-azar estable: el mismo (x) da el mismo valor. Sirve para que los destellos
+// aleatorios duren unos cuadros (se ven) en vez de cambiar a 60fps (se mezclan).
+uint8_t mix8(uint32_t x) {
+  x ^= x >> 16; x *= 0x7feb352dUL;
+  x ^= x >> 15; x *= 0x846ca68bUL;
+  x ^= x >> 16;
+  return (uint8_t)x;
+}
+
 // Las animaciones transitorias se ejecutan un rato y despues vuelven a z.next.
 bool isTransient(uint8_t a) {
-  return a == A_PROCESS || a == A_PING || a == A_SCAN || a == A_BLIP || a == A_ERROR;
+  return a == A_PROCESS || a == A_PING || a == A_SCAN || a == A_BLIP || a == A_ERROR ||
+         a == A_OPEN;
 }
 
 // Arranca una anim transitoria recordando a donde volver (el estado previo, salvo
-// que ya fuera transitorio). Al terminar, renderZone hace setAnim(z, z.next).
+// que ya fuera transitorio). Al terminar, renderZone hace settle(z, z.next).
 void startTransient(Zone& z, uint8_t a) {
   if (!isTransient(z.anim)) z.next = z.anim;
   setAnim(z, a);
@@ -152,19 +180,16 @@ void setAllZones(uint8_t a) {
   for (int k = 0; k < NUM_NODES; k++) setAnim(nodes[k], a);
 }
 
-// Anima el tramo b. Si termina en un nodo, el nodo "procesa" (titila) y despues
-// queda como el tramo. Con OFF/IDLE el nodo copia el estado sin titilar.
+// Anima el tramo b y el nodo del final (si tiene) con la misma anim. El nodo no
+// titila aparte: cada animacion le da su acento (destella cuando el barrido o el
+// pulso pasan por el, strobe en el ataque, etc.; ver z.node en renderZone).
+// NODE:<id>:PROCESS sigue existiendo para hacerlo titilar a proposito.
 void animBranch(int b, uint8_t a) {
   if (isTransient(a)) startTransient(branches[b], a);
   else setAnim(branches[b], a);
   if (b >= NUM_NODES) return;
-  Zone& n = nodes[b];
-  if (a == A_OFF || a == A_IDLE) { setAnim(n, a); return; }
-  // Con una anim transitoria el nodo la acompana y vuelve a lo previo; con una
-  // sostenida titila ("procesando") y queda como el tramo.
-  if (isTransient(a)) { startTransient(n, a); return; }
-  n.next = (a == A_DISCOVER) ? A_FOCUS : a;
-  setAnim(n, A_PROCESS);
+  if (isTransient(a)) startTransient(nodes[b], a);
+  else setAnim(nodes[b], a);
 }
 
 // Reserva los proximos n LEDs de la cadena para la zona z (sin pasarse del buffer).
@@ -181,7 +206,7 @@ void setup() {
   Serial.begin(115200);
   for (int b = 0; b < NUM_BRANCHES; b++) {
     reserve(branches[b], BRANCH_COUNTS[b]);
-    if (b < NUM_NODES) reserve(nodes[b], 1);
+    if (b < NUM_NODES) { reserve(nodes[b], 1); nodes[b].node = true; }
   }
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, numLeds);
   // Limite de consumo: la fuente es 5V/10A (50W). Con 68 LEDs el blanco pleno
@@ -228,7 +253,11 @@ void renderZone(Zone& z) {
       // varias pasadas (dejando una estela tenue) y recien despues queda en FOCUS.
       const uint32_t PASS = 520;    // ms por pasada
       const int PASSES = 3;         // cuantas veces se repite el barrido
-      if (el >= PASS * PASSES) { setAnim(z, A_FOCUS); break; }
+      if (el >= PASS * PASSES) { settle(z, A_FOCUS); break; }
+      if (z.node) {                 // el nodo destella cuando la cabeza llega a el
+        px[0] = ((el % PASS) * 4 >= PASS * 3) ? C_WHITE : C_DIMG;
+        break;
+      }
       int head = (int)(((el % PASS) * n) / PASS);
       for (int i = 0; i < n; i++) {
         int d = head - i;
@@ -239,19 +268,43 @@ void renderZone(Zone& z) {
       break;
     }
 
-    case A_FOCUS:
-      fill_solid(px, n, CRGB(20, 120, 30));
+    case A_FOCUS: {
+      // Ruta en foco: entra con un BARRIDO desde la terminal (frente blanco) y despues
+      // queda verde con un pulso de datos que la recorre hacia el objetivo. Usa la
+      // posicion absoluta (z.start+i), asi los tramos de una ruta forman un solo
+      // barrido continuo. Los nodos destellan blanco cuando el pulso pasa por ellos.
+      int front = (int)(el / FOCUS_WIPE_MS_PER_LED);
+      int cycle = (numLeds > 0 ? numLeds : 1) + FOCUS_PULSE_GAP;
+      int pulse = (int)((millis() / FOCUS_PULSE_MS_PER_LED) % cycle);
+      for (int i = 0; i < n; i++) {
+        int p = z.start + i;
+        if (p > front) { px[i] = CRGB(3, 18, 5); continue; }      // el barrido no llego
+        CRGB c = z.node ? C_GREEN : C_FOCUS;
+        int dw = front - p;                                       // frente del barrido
+        if (dw < 5) c = blend(c, C_WHITE, (uint8_t)(255 - dw * 50));
+        int dp = pulse - p;                                       // pulso de datos
+        int tail = z.node ? 12 : 6;
+        if (dp >= 0 && dp < tail)
+          c = blend(c, z.node ? C_WHITE : CRGB(150, 255, 150), (uint8_t)(255 - dp * (255 / tail)));
+        px[i] = c;
+      }
       break;
+    }
 
     case A_EXPLOIT: {
-      // Ataque: ROJO agresivo. Strobe rapido de fondo + un punto caliente que
-      // corre por el tramo (sensacion de intrusion).
-      uint8_t w = triwave8((el / 3) & 0xFF);
-      fill_solid(px, n, blend(CRGB(30, 0, 0), C_RED, w));
-      int head = (el / 22) % (n > 0 ? n : 1);
-      for (int k = 0; k < 3; k++) {
-        int j = head - k;
-        if (j >= 0 && j < n) px[j] = C_REDHOT;
+      // Fuerza bruta: rojo oscuro que late + rafagas de "intentos" (cabeza blanco
+      // caliente, estela naranja) que corren sin parar de la terminal al objetivo por
+      // toda la ruta. Los nodos hacen strobe blanco/rojo.
+      uint32_t now = millis();
+      if (z.node) { px[0] = ((now / 70) & 1) ? C_WHITE : C_RED; break; }
+      CRGB base = blend(CRGB(25, 0, 0), CRGB(120, 0, 0), triwave8((now / 4) & 0xFF));
+      const int GAP = 17;                                  // LEDs entre rafaga y rafaga
+      uint32_t t = now / 16 + GAP * 8;                     // +offset: nunca negativo
+      for (int i = 0; i < n; i++) {
+        int d = (int)((t - (uint32_t)(z.start + i)) % GAP);   // 0 = cabeza
+        if (d == 0)     px[i] = C_HOT;
+        else if (d < 6) px[i] = blend(base, CRGB(255, 90, 0), (uint8_t)(255 - d * 42));
+        else            px[i] = base;
       }
       break;
     }
@@ -268,14 +321,14 @@ void renderZone(Zone& z) {
 
     case A_PROCESS:
       // titila blanco ("procesando") y despues pasa a z.next
-      if (el >= NODE_PROCESS_MS) { setAnim(z, z.next); break; }
+      if (el >= NODE_PROCESS_MS) { settle(z, z.next); break; }
       fill_solid(px, n, ((el / NODE_BLINK_MS) & 1) ? CRGB::Black : C_WHITE);
       break;
 
     case A_PING: {
       // Eco: un punto cyan va de la terminal al final del tramo y vuelve, una vez.
       const uint32_t D = 900;
-      if (el >= D) { setAnim(z, z.next); break; }
+      if (el >= D) { settle(z, z.next); break; }
       uint32_t half = D / 2;
       int head = (el < half) ? (int)((el * (n - 1)) / half)
                              : (int)(((D - el) * (n - 1)) / half);   // ida y vuelta
@@ -289,7 +342,7 @@ void renderZone(Zone& z) {
     case A_SCAN: {
       // Escaneo de puertos: flicker ambar/verde por toda la zona y vuelve a z.next.
       const uint32_t D = 1100;
-      if (el >= D) { setAnim(z, z.next); break; }
+      if (el >= D) { settle(z, z.next); break; }
       for (int i = 0; i < n; i++) {
         uint8_t r = random8();
         px[i] = (r > 180) ? C_AMBER : (r > 110 ? CRGB(50, 35, 0) : CRGB::Black);
@@ -300,7 +353,7 @@ void renderZone(Zone& z) {
     case A_BLIP: {
       // Ack breve: un destello verde que sube y baja. Reacciona a cualquier comando.
       const uint32_t D = 260;
-      if (el >= D) { setAnim(z, z.next); break; }
+      if (el >= D) { settle(z, z.next); break; }
       uint8_t w = quadwave8((uint8_t)((el * 255) / D));
       fill_solid(px, n, blend(CRGB::Black, C_GREEN, w));
       break;
@@ -309,17 +362,69 @@ void renderZone(Zone& z) {
     case A_ERROR: {
       // Error: parpadeo rojo un par de veces y vuelve a z.next.
       const uint32_t D = 700;
-      if (el >= D) { setAnim(z, z.next); break; }
+      if (el >= D) { settle(z, z.next); break; }
       fill_solid(px, n, ((el / 120) & 1) ? CRGB::Black : C_RED);
       break;
     }
 
     case A_GLITCH: {
-      // Caos de intrusion (SOSTENIDA): cada LED un color aleatorio, refresco rapido,
-      // sobre una base roja -> sensacion de sistema "reventado" mientras corre el ataque.
+      // Caos de intrusion (SOSTENIDA), pensado para los nodos durante el ataque:
+      // destellos blancos y de colores saturados a pleno brillo, que cambian cada
+      // ~55 ms (a 60fps se mezclaban en un rojizo opaco y no se notaban). Sin rojos,
+      // para que resalten sobre la ruta roja del EXPLOIT.
+      uint32_t slot = millis() / 55;
       for (int i = 0; i < n; i++) {
-        if (random8() < 90) px[i] = CRGB(random8(), random8(), random8());
-        else                px[i] = blend(CRGB(40, 0, 0), C_RED, random8());
+        uint8_t r = mix8(slot * 131 + z.start + i);
+        if (r < 120)      px[i] = C_WHITE;
+        else if (r < 220) px[i] = CHSV(40 + mix8(slot * 7 + z.start + i) % 180, 255, 255);
+        else              px[i] = CRGB::Black;
+      }
+      break;
+    }
+
+    case A_OPEN: {
+      // Abrir carpeta: un cambio rapido de colores y despues un barrido desde la
+      // terminal que deja un degrade del amarillo (frente) al verde (atras); termina
+      // en verde y vuelve a z.next (normalmente FOCUS) sin cortes.
+      const uint32_t COLORS = 300, D = 950;
+      if (el >= D) { settle(z, z.next); break; }
+      for (int i = 0; i < n; i++) {
+        int p = z.start + i;
+        uint8_t chaos = (uint8_t)((el / 45) * 53 + p * 4);
+        if (el < COLORS) { px[i] = CHSV(chaos, 255, 255); continue; }
+        int32_t since = (int32_t)(el - COLORS) - p * 5;   // ms desde que paso el frente
+        if (since < 0) { px[i] = CHSV(chaos, 255, 90); continue; }   // todavia no llego
+        if (since > 320) since = 320;
+        // hue 64 = amarillo -> 96 = verde; el brillo baja un poco hacia el de FOCUS
+        px[i] = CHSV((uint8_t)(64 + since / 10), 255, (uint8_t)(255 - since / 3));
+      }
+      break;
+    }
+
+    case A_WIN: {
+      // Victoria (SOSTENIDA): FIESTA. Primero los datos "vuelven" del servidor a la
+      // terminal como cometas de colores que van llenando el tablero desde el
+      // FILE-SERVER; despues queda un arcoiris que corre, con chispas blancas y un
+      // flash cada 2,4 s. Los nodos hacen strobe blanco/colores.
+      uint32_t now = millis();
+      int fill = numLeds - (int)(el / 14);                 // llenado desde el servidor
+      uint8_t flash = 0;
+      uint32_t ph = now % 2400;
+      if (el > 1200 && ph < 250) flash = (uint8_t)(255 - ph * 255 / 250);
+      for (int i = 0; i < n; i++) {
+        int p = z.start + i;
+        uint8_t hue = (uint8_t)(p * 7 + now / 5);
+        CRGB c;
+        if (z.node) {
+          c = ((now / 80) & 1) ? CRGB(C_WHITE) : CRGB(CHSV(now / 3, 255, 255));
+        } else if (p < fill) {                             // cometas hacia la terminal
+          int k = (int)((now / 9 + p) % 10);
+          c = (k < 3) ? CRGB(CHSV(hue, 255, 255 - k * 90)) : CRGB(CRGB::Black);
+        } else {
+          c = CHSV(hue, 255, 255);
+          if (mix8((now / 40) * 131 + p) > 238) c = C_WHITE;   // chispas
+        }
+        px[i] = blend(c, C_WHITE, flash);
       }
       break;
     }
@@ -337,6 +442,8 @@ uint8_t animFromToken(const String& t) {
   if (t == "BLIP")     return A_BLIP;
   if (t == "ERROR")    return A_ERROR;
   if (t == "GLITCH")   return A_GLITCH;
+  if (t == "OPEN")     return A_OPEN;
+  if (t == "WIN")      return A_WIN;
   if (t == "IDLE")     return A_IDLE;
   return A_OFF;
 }

@@ -43,16 +43,18 @@ NUM_LEDS = 68
 
 # Animaciones reconocidas por el firmware
 ANIM_DISCOVER = "DISCOVER"  # barrido suave al descubrir
-ANIM_FOCUS = "FOCUS"        # resaltado fijo del tramo en foco
-ANIM_EXPLOIT = "EXPLOIT"    # pulso intenso/rapido
+ANIM_FOCUS = "FOCUS"        # barrido de entrada y queda verde con un pulso de datos
+ANIM_EXPLOIT = "EXPLOIT"    # fuerza bruta: rojo que late + rafagas blanco/naranja
 ANIM_TRANSFER = "TRANSFER"  # parpadeo rapido (transferencia de datos)
 ANIM_PROCESS = "PROCESS"    # titila unos segundos (nodo procesando) y vuelve
+ANIM_WIN = "WIN"            # victoria SOSTENIDA: arcoiris, chispas y flashes
 # Transitorias: animan un rato y vuelven solas al estado previo de la zona.
 ANIM_PING = "PING"          # eco que va y vuelve (ping)
 ANIM_SCAN = "SCAN"          # escaneo de puertos (flicker) -- telnet / knock
 ANIM_BLIP = "BLIP"          # ack rapido de cualquier comando (reacciona a todo)
 ANIM_ERROR = "ERROR"        # flash rojo de error (comando invalido / fallo)
-ANIM_GLITCH = "GLITCH"      # caos de intrusion SOSTENIDO (durante el exploit)
+ANIM_OPEN = "OPEN"          # abrir carpeta: colores rapidos + degrade amarillo->verde
+ANIM_GLITCH = "GLITCH"      # caos de intrusion SOSTENIDO (nodos durante el exploit)
 
 
 def segments_for_role(role: str) -> list[int]:

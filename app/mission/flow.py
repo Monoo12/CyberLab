@@ -276,6 +276,8 @@ class MissionController:
         self._reveal_hosts(0)
 
     def _reveal_hosts(self, i):
+        if not self._alive:   # se volvio al menu a mitad del scan: la terminal ya no existe
+            return
         if i >= len(self.hosts):
             self.term.writeln("")
             n = script.nudge(self.difficulty, "scan_done", str(self.target_ip))
@@ -509,7 +511,7 @@ class MissionController:
         self._async(lambda: self.backend.traceroute(ip), done)
 
     def _light_path_progressive(self, segs, i):
-        if i >= len(segs):
+        if i >= len(segs) or not self._alive:
             return
         self.leds.animate_segment(segs[i], seg.ANIM_DISCOVER)
         self.root.after(350, lambda: self._light_path_progressive(segs, i + 1))
@@ -562,9 +564,8 @@ class MissionController:
         if ok:
             self.cwd = target
             self.term.writeln("  -> " + target, tag="dim")
-            segs = self._session_segments()
-            if segs:
-                self.leds.animate_segment(segs[-1], seg.ANIM_BLIP)  # blip al cambiar de carpeta
+            # abrir carpeta: colores rapidos + degrade amarillo->verde por la ruta
+            self.leds.animate_segments(self._session_segments(), seg.ANIM_OPEN)
         else:
             self.term.writeln("[!] No existe el directorio: " + target, tag="amber")
             self.leds.animate_all(seg.ANIM_ERROR)
@@ -580,8 +581,8 @@ class MissionController:
             self._no_access()
             return
         target = self._resolve(path)
-        # leyendo el directorio: shimmer corto sobre el tramo del servidor
-        self.leds.animate_segments(self._session_segments(), seg.ANIM_BLIP)
+        # leyendo el directorio: la misma animacion de "abrir carpeta" sobre la ruta
+        self.leds.animate_segments(self._session_segments(), seg.ANIM_OPEN)
         self._busy(True)
         self._async(lambda: self.backend.ls(self.session_ip, target), self._ls_done)
 
@@ -641,7 +642,7 @@ class MissionController:
         self.state = DONE
         self._cancel_timers()
         self.term.type_lines(script.MISSION_COMPLETE, tag="green", on_done=self._arm_done_reset)
-        self.leds.animate_all(seg.ANIM_TRANSFER)
+        self.leds.animate_all(seg.ANIM_WIN)
 
     def _arm_done_reset(self):
         self.term.set_input_enabled(False)

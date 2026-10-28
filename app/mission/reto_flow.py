@@ -168,7 +168,7 @@ class RetoController:
     def _win(self):
         self.state = "done"
         self._cancel_all()
-        self.leds.animate_segments(seg.ALL_SEGMENTS, seg.ANIM_TRANSFER)
+        self.leds.animate_all(seg.ANIM_WIN)
         m, s = divmod(max(0, self._remaining), 60)
         self.reto.set_progress(1.0)
         self.reto.render_done(

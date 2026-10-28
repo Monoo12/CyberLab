@@ -205,14 +205,14 @@ class TarjetasController:
     def _choice_explore(self, key):
         if key == "__up__":
             self._cwd = posixpath.dirname(self._cwd.rstrip("/")) or "/"
-            self.leds.animate_segments(seg.segments_for_role("fileserver"), seg.ANIM_BLIP)
+            self.leds.animate_segments(seg.segments_for_role("fileserver"), seg.ANIM_OPEN)
             self._render_explore()
             return
         is_dir = self._entries.get(key, False)
         child = ("/" + key) if self._cwd == "/" else posixpath.join(self._cwd, key)
         if is_dir:
             self._cwd = child
-            self.leds.animate_segments(seg.segments_for_role("fileserver"), seg.ANIM_BLIP)
+            self.leds.animate_segments(seg.segments_for_role("fileserver"), seg.ANIM_OPEN)
             self._render_explore()
         elif key == "secret.txt":
             self._open_secret(child)
@@ -224,7 +224,7 @@ class TarjetasController:
         def done(_res):
             if self.netmap:
                 self.netmap.transfer_role("fileserver")
-            self.leds.animate_segments(seg.segments_for_role("fileserver"), seg.ANIM_TRANSFER)
+            self.leds.animate_all(seg.ANIM_WIN)   # te llevaste el archivo: fiesta en el tablero
             self._finish()
         self._async(lambda: self.backend.read(self.session_ip, path), done)
 

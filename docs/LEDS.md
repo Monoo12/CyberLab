@@ -17,11 +17,11 @@ paréntesis, la cuenta a mano desde 1.
 | Zona | Recorrido físico | LEDs | Números de LED |
 |---|---|:---:|:---:|
 | **Segmento 0** · Tramo 1 | **TERMINAL** → switch-izq | 13 | 0–12 (1–13) |
-| Nodo 0 · switch-izq | titila "procesando" | 1 | 13 (14) |
+| Nodo 0 · switch-izq | acento de cada animación | 1 | 13 (14) |
 | **Segmento 1** · Tramo 2 | switch-izq → router | 20 | 14–33 (15–34) |
-| Nodo 1 · router | titila "procesando" | 1 | 34 (35) |
+| Nodo 1 · router | acento de cada animación | 1 | 34 (35) |
 | **Segmento 2** · Tramo 3 | router → switch-der | 19 | 35–53 (36–54) |
-| Nodo 2 · switch-der | titila "procesando" | 1 | 54 (55) |
+| Nodo 2 · switch-der | acento de cada animación | 1 | 54 (55) |
 | **Segmento 3** · Tramo 4 | switch-der → **FILE-SERVER** | 13 | 55–67 (56–68) |
 
 > **El LED 62 (63 contando a mano) está dañado y no se prende nunca**, con ningún comando: el firmware
@@ -33,10 +33,12 @@ paréntesis, la cuenta a mano desde 1.
 
 ### Nodos (switch / router)
 
-Cada vez que un `SEG:<id>:<anim>` enciende un tramo, el **nodo del final de ese tramo titila en blanco
-~2,5 s** (simula que el switch o el router procesa el paquete) y después queda igual que el tramo. El
-tramo 4 llega al FILE-SERVER y no tiene nodo. Con `OFF`/`IDLE` los nodos siguen a la tira sin titilar.
-La app no manda nada extra para esto: alcanza con los `SEG` de siempre.
+Cada `SEG:<id>:<anim>` anima el tramo **y el nodo del final** con la misma animación, y el nodo le
+pone su acento: destella blanco cuando el barrido o el pulso de datos pasa por él (`DISCOVER`, `FOCUS`),
+hace strobe blanco/rojo en el ataque (`EXPLOIT`) o de colores en la victoria (`WIN`). El tramo 4 llega al
+FILE-SERVER y no tiene nodo. La app no manda nada extra para esto: alcanza con los `SEG` de siempre.
+(Antes el nodo titilaba blanco ~2,5 s con cada `SEG`; quedaba feo con la ruta entera en verde. Para
+hacerlo titilar a propósito sigue `NODE:<id>:PROCESS`.)
 
 ## 2. Ruta de LEDs por dispositivo (desde la terminal)
 
@@ -60,18 +62,20 @@ llegan hasta el switch-der y el último salto se ve solo en el mapa de la pantal
 | `IDLE` | Espera (nadie jugando) | respiración/shimmer verde muy tenue |
 | `OFF` | Apagado | negro |
 | `DISCOVER` | Se descubre/recorre un tramo | barrido de encendido y queda tenue |
-| `FOCUS` | Tramo en foco (objetivo actual) | verde fijo medio |
-| `EXPLOIT` | Ataque en curso | pulso rápido ámbar/intenso |
+| `FOCUS` | Tramo en foco (objetivo actual) | entra con un barrido desde la terminal (frente blanco) y queda verde con un pulso de datos que recorre la ruta cada ~1,3 s |
+| `EXPLOIT` | Ataque / fuerza bruta en curso | rojo oscuro que late + ráfagas (cabeza blanca, estela naranja) que corren sin parar hacia el objetivo; nodos en strobe blanco/rojo |
 | `TRANSFER` | Transferencia de datos (flag/archivo) | chase rápido cyan |
 | `PROCESS` | Un nodo procesa (switch/router) | titila blanco ~2,5 s y vuelve a como estaba |
 | `PING` | Eco de un `ping` | punto cyan que va hasta el final del tramo y vuelve, una vez |
 | `SCAN` | Golpear un puerto (`telnet`) | flicker ámbar/verde un ~1 s |
 | `BLIP` | Ack breve de un comando | destello verde corto que sube y baja |
 | `ERROR` | Comando inválido / fallo | parpadeo rojo un par de veces |
-| `GLITCH` | Caos durante el exploit (**sostenida**) | cada LED un color al azar sobre base roja; "sistema reventado" |
+| `GLITCH` | Caos en los nodos durante el exploit (**sostenida**) | destellos blancos y de colores saturados (sin rojos) que cambian cada ~55 ms; resaltan sobre la ruta roja |
+| `OPEN` | Abrir una carpeta (`ls`/`cd`, carpetas en tarjetas) | ~1 s: cambio rápido de colores y un barrido que deja un degradé del amarillo al verde |
+| `WIN` | Victoria (**sostenida**) | los datos vuelven del servidor como cometas de colores, después arcoíris que corre + chispas blancas + un flash cada 2,4 s; nodos en strobe de colores |
 
-> `PING`, `SCAN`, `BLIP` y `ERROR` son **transitorias**: animan un rato y después vuelven **solas** al
-> estado que tenía la zona (como `PROCESS`). Se agregaron para que **todos** los comandos muevan el
+> `PING`, `SCAN`, `BLIP`, `ERROR` y `OPEN` son **transitorias**: animan un rato y después vuelven **solas**
+> al estado que tenía la zona (como `PROCESS`), sin repetir el barrido de entrada de `FOCUS`. Se agregaron para que **todos** los comandos muevan el
 > tablero. **Requieren reflashear el ESP** con el `.ino` nuevo; con firmware viejo, el micro ignora el
 > token (lo trata como `OFF`).
 
@@ -108,21 +112,22 @@ segmento** de la ruta (no hay un comando "multi-segmento").
 | `telnet <ip> <puerto>` | ruta(role del ip) | `SCAN` | `SEG:0:SCAN` … (flicker, "golpear la puerta") |
 | `arp` | los 3 nodos | `PROCESS` | `NODE:0:PROCESS` `NODE:1:PROCESS` `NODE:2:PROCESS` |
 | `netstat` | tramo propio (terminal) | `PING` | `SEG:0:PING` |
-| `ls` (tras acceso) | ruta(role del host actual) | `BLIP` | `SEG:…:BLIP` |
-| `cd` (tras acceso) | último tramo del host | `BLIP` | `SEG:3:BLIP` (ej. fileserver) |
+| `ls` (tras acceso) | ruta(role del host actual) | `OPEN` | `SEG:…:OPEN` |
+| `cd` (tras acceso) | ruta(role del host actual) | `OPEN` | `SEG:…:OPEN` |
 | `traceroute <ip>` | ruta(role del ip), **salto por salto** | `DISCOVER` | `SEG:0:DISCOVER` → (350 ms) `SEG:1:DISCOVER` → `SEG:2:DISCOVER` → `SEG:3:DISCOVER` |
 | `exploit <ip>` — mientras corre | ruta(role del ip) | `EXPLOIT` | `SEG:0:EXPLOIT` … `SEG:3:EXPLOIT` |
 | `exploit <ip>` — al lograr acceso | ruta(role del ip) | `FOCUS` | idem con `FOCUS` |
 | `read` de una FLAG / `secret.txt` | ruta(role del host actual) | `TRANSFER` | `SEG:…:TRANSFER` |
 | comando local (`pwd`/`whoami`/`help`/`hint`/`clear`) | nodo 0 | `BLIP` | `NODE:0:BLIP` |
 | comando inválido / gating | todos | `ERROR` | `ALL:ERROR` |
-| **Mission Complete** | todas | `TRANSFER` | `ALL:TRANSFER` |
+| **Mission Complete** | todas | `WIN` | `ALL:WIN` |
 | Reset / volver a espera | todas | `IDLE` | `IDLE` |
 | Volver al menú / apagar | todas | `OFF` | `OFF` |
 
 **Ya no hay comandos "mudos":** cada comando mueve algo en el tablero (ver filas de arriba). `inspect -v`
 usa la misma animación que `inspect`. En los modos **tarjetas/guiado**, el "golpe 2" (entrar) lo anima
-el overlay de suspenso (`EXPLOIT` → `ERROR` → `TRANSFER`); en **reto**, las pistas usan
+el overlay de suspenso (`EXPLOIT` + `GLITCH` en los nodos → `ERROR` → `TRANSFER`), las carpetas de
+tarjetas usan `OPEN` y la victoria de los tres modos es `ALL:WIN`; en **reto**, las pistas usan
 `NODE:*:PROCESS` (contar nodos), `BLIP` repetido en el router (contar destellos) y `DISCOVER` salto por
 salto (seguir la señal).
 
@@ -139,20 +144,20 @@ SEG:0:FOCUS SEG:1:FOCUS SEG:2:FOCUS SEG:3:FOCUS               (inspect / connect
 SEG:0:EXPLOIT SEG:1:EXPLOIT SEG:2:EXPLOIT SEG:3:EXPLOIT       (exploit)
 SEG:0:FOCUS SEG:1:FOCUS SEG:2:FOCUS SEG:3:FOCUS               (acceso concedido)
 SEG:0:TRANSFER SEG:1:TRANSFER SEG:2:TRANSFER SEG:3:TRANSFER   (read secret.txt)
-ALL:TRANSFER                 (Mission Complete)
+ALL:WIN                      (Mission Complete)
 ```
 
 ## 6. Notas para el firmware
 
 - El `.ino` implementa `IDLE/OFF/SEG/ALL/NODE/PIX/ADD` y las animaciones
-  `DISCOVER/FOCUS/EXPLOIT/TRANSFER/PROCESS` + las transitorias `PING/SCAN/BLIP/ERROR` (no bloqueantes
+  `DISCOVER/FOCUS/EXPLOIT/TRANSFER/PROCESS/GLITCH/WIN` + las transitorias `PING/SCAN/BLIP/ERROR/OPEN` (no bloqueantes
   con `millis()`). Cada tramo y cada rango de `PIX`/`ADD` es una "zona" que se anima por su cuenta.
-- **Reflasheo:** las animaciones `PING/SCAN/BLIP/ERROR` son nuevas. Después de actualizar el `.ino` hay
+- **Reflasheo:** las animaciones `OPEN` y `WIN` (y antes `PING/SCAN/BLIP/ERROR`) son nuevas. Después de actualizar el `.ino` hay
   que **volver a cargar el firmware al ESP** (`arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 ...`
   y `upload`, ver `docs/GUIA-HARDWARE.md`). Con firmware viejo esos comandos dejan el tramo en negro en
   vez de animar (no rompe nada, solo se ve pobre).
-- **`DISCOVER` termina en tenue y `FOCUS` en fijo**: es intencional — tras el barrido, el tramo queda
-  suave; el foco lo pinta más fuerte cuando es el objetivo.
+- **`DISCOVER` termina en `FOCUS` sin repetir el barrido**: tras las pasadas, el tramo queda verde con el
+  pulso de datos. Mandar `FOCUS` de nuevo sí repite el barrido de entrada (sirve como "acá estamos").
 - La app manda **un `SEG:` por segmento**; el firmware anima cada tramo de forma independiente, así que
   no importa el orden ni que lleguen varios seguidos.
 - Si agregás un tramo nuevo: sumá su entrada en `app/leds/segments.py` (`PATH_TO_ROLE`), su enlace en

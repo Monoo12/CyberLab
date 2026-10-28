@@ -219,7 +219,10 @@ class MissionApp:
             self.terminal.focus_input()
 
     def _on_matrix_key(self):
-        self.controller.on_any_key()
+        # F5/Ctrl+M en el matrix: la raiz vuelve al menu (controller=None) y despues
+        # el mismo evento llega igual a este bind_all
+        if self.controller is not None:
+            self.controller.on_any_key()
 
     def _on_timer(self, remaining):
         if remaining is None:   # modo libre o tarjetas: sin cuenta regresiva
