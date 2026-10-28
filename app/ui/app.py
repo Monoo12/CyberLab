@@ -2,6 +2,7 @@
 
 Vistas apiladas: setup -> mision (terminal + mapa) / espera (matrix rain).
 Construye el backend (real/simulado) y el MissionController segun la config.
+El tamano de la ventana y la escala del contenido los maneja app/ui/responsive.py.
 """
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ from app.leds.controller import LedController
 from app.mission.flow import MissionController
 from app.mission.reto_flow import RetoController
 from app.mission.tarjetas_flow import TarjetasController
-from app.ui import theme
+from app.ui import responsive, theme
 from app.ui.matrix import MatrixRain
 from app.ui.netmap import NetworkMapPanel
 from app.ui.reto import RetoView
@@ -20,6 +21,11 @@ from app.ui.setup_menu import SetupMenu
 from app.ui.suspense import SuspenseOverlay
 from app.ui.tarjetas import TarjetasView
 from app.ui.terminal import TerminalPanel
+
+# Lienzos de la vista de mision (px logicos a escala 1; ver app/ui/responsive.py).
+# Con mapa: 0 = mapa al costado (pantallas apaisadas), 1 = mapa abajo (verticales/angostas).
+_MISSION_DESIGNS = ((1280, 720), (860, 980))
+_MISSION_DESIGNS_NO_MAP = ((860, 720),)
 
 
 def _make_backend(cfg):
@@ -36,9 +42,10 @@ class MissionApp:
         self.root = ctk.CTk()
         self.root.title("Cyber Lab")
         self.root.configure(fg_color=theme.BG)
-        self.root.geometry("1200x760")
+        self.resp = responsive.install(self.root)
+        self.resp.open_window(design=_MISSION_DESIGNS[0])
         self.root.bind("<F11>", self._toggle_fullscreen)
-        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
+        self.root.bind("<Escape>", self._exit_fullscreen)
         # Atajo del operador: volver al menu de setup desde cualquier modo (util en
         # tarjetas/reto, que no tienen comando 'menu'). F5 o Ctrl+M.
         self.root.bind("<Control-m>", lambda e: self.return_to_setup())
@@ -62,6 +69,7 @@ class MissionApp:
 
     # ------------------------------------------------------------------
     def _show_setup(self):
+        self.resp.set_designs(*SetupMenu.DESIGNS)
         self.setup = SetupMenu(self._container, self.cfg, on_start=self._on_setup_done,
                                leds=self.leds)
         self.setup.pack(fill="both", expand=True)
@@ -97,6 +105,8 @@ class MissionApp:
     # ------------------------------------------------------------------
     def _build_mission(self):
         self.backend = _make_backend(self.cfg)
+        self.resp.set_designs(*(_MISSION_DESIGNS if self.cfg.modes.visual
+                                else _MISSION_DESIGNS_NO_MAP))
 
         # Vista de mision
         self.mission_frame = ctk.CTkFrame(self._container, fg_color=theme.BG)
@@ -125,19 +135,17 @@ class MissionApp:
         self.cards = None
         self.reto = None
         if mode == "tarjetas":
-            self.cards = TarjetasView(body, self.mono)
-            self.cards.pack(side="left", fill="both", expand=True)
+            self.cards = main_view = TarjetasView(body, self.mono)
         elif mode == "reto":
-            self.reto = RetoView(body, self.mono)
-            self.reto.pack(side="left", fill="both", expand=True)
+            self.reto = main_view = RetoView(body, self.mono)
         else:
-            self.terminal = TerminalPanel(body, self.mono, cps=self.cfg.timing.typewriter_cps)
-            self.terminal.pack(side="left", fill="both", expand=True)
+            self.terminal = main_view = TerminalPanel(body, self.mono,
+                                                      cps=self.cfg.timing.typewriter_cps)
         if self.cfg.modes.visual:
             self.netmap = NetworkMapPanel(body, self.cfg, self.mono)
-            self.netmap.configure(width=460)
-            self.netmap.pack(side="right", fill="both", expand=False)
-            self.netmap.pack_propagate(False)
+        self._body, self._main_view, self._map_below = body, main_view, None
+        self._layout_body()
+        responsive.on_change(body, self._layout_body)
 
         # Overlay de suspenso (modos accesibles): cubre la vista de mision cuando juega
         self.suspense = SuspenseOverlay(self.mission_frame, self.mono, self.leds)
@@ -167,6 +175,33 @@ class MissionApp:
                 suspense=self.suspense,
             )
         self.controller.enter_waiting()
+
+    def _layout_body(self):
+        """Vista principal + mapa: el mapa va al costado (36% del ancho) o, si el lienzo
+        elegido es el vertical, abajo (32% del alto). Sin mapa, la vista ocupa todo."""
+        body, main = self._body, self._main_view
+        if self.netmap is None:
+            if not main.winfo_manager():
+                main.pack(fill="both", expand=True)
+            return
+        below = self.resp.layout == 1
+        if below == self._map_below:
+            return
+        self._map_below = below
+        for i in (0, 1):   # limpiar la grilla del layout anterior
+            body.grid_columnconfigure(i, weight=0, uniform="")
+            body.grid_rowconfigure(i, weight=0, uniform="")
+        main.grid(row=0, column=0, sticky="nsew")
+        if below:
+            self.netmap.grid(row=1, column=0, sticky="nsew")
+            body.grid_columnconfigure(0, weight=1)
+            body.grid_rowconfigure(0, weight=68, uniform="body")
+            body.grid_rowconfigure(1, weight=32, uniform="body")
+        else:
+            self.netmap.grid(row=0, column=1, sticky="nsew")
+            body.grid_rowconfigure(0, weight=1)
+            body.grid_columnconfigure(0, weight=64, uniform="body")
+            body.grid_columnconfigure(1, weight=36, uniform="body")
 
     # ------------------------------------------------------------------
     def _show_waiting(self):
@@ -198,6 +233,10 @@ class MissionApp:
     def _toggle_fullscreen(self, _evt=None):
         self._fullscreen = not self._fullscreen
         self.root.attributes("-fullscreen", self._fullscreen)
+
+    def _exit_fullscreen(self, _evt=None):
+        self._fullscreen = False   # si no, el proximo F11 "apagaba" de nuevo y no hacia nada
+        self.root.attributes("-fullscreen", False)
 
     # ------------------------------------------------------------------
     def run(self):

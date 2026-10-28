@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
-from app.ui import theme
+from app.ui import responsive, theme
 
 # Nodos que se tocan en los acertijos de secuencia (clave -> etiqueta).
 NODE_BUTTONS = [("izq", "SW-IZQ"), ("router", "ROUTER"), ("der", "SW-DER")]
@@ -34,7 +34,8 @@ class RetoView(ctk.CTkFrame):
 
         wrap = ctk.CTkFrame(self, fg_color=theme.BG)
         wrap.place(relx=0.5, rely=0.5, anchor="center")
-        wrap.grid_columnconfigure(0, weight=1, minsize=720)
+        wrap.grid_columnconfigure(0, weight=1)
+        responsive.bind_minsize(wrap, 0, 720)
         r = [0]
 
         def add(w, pady=(0, 6)):

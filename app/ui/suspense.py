@@ -20,7 +20,7 @@ import random
 import customtkinter as ctk
 
 from app.leds import segments as seg
-from app.ui import theme
+from app.ui import responsive, theme
 
 # Claves debiles de muestra para el contador (puro flavor visual).
 _WEAK = ["123456", "password", "qwerty", "admin", "12345678", "iloveyou", "111111",
@@ -58,7 +58,8 @@ class SuspenseOverlay(ctk.CTkFrame):
         box = ctk.CTkFrame(self, fg_color=theme.BG_PANEL, corner_radius=18,
                            border_color=theme.RED, border_width=2)
         box.place(relx=0.5, rely=0.5, anchor="center")
-        box.grid_columnconfigure(0, weight=1, minsize=620)
+        box.grid_columnconfigure(0, weight=1)
+        responsive.bind_minsize(box, 0, 620)
 
         r = [0]
 

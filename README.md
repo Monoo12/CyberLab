@@ -43,7 +43,8 @@ python -m app.main --engine simulated
 ```
 
 Se abre el menú de setup (panel visual, motor Real/Simulado, dificultad Fácil/Medio/Difícil) y luego la
-misión. `F11` alterna pantalla completa; `Esc` sale de pantalla completa.
+misión. La ventana abre a la medida de la pantalla (maximizada en notebooks y pantallas chicas) y todo
+el contenido se adapta al tamaño. `F11` alterna pantalla completa; `Esc` sale de pantalla completa.
 
 Flags útiles: `--mode tarjetas|guiado|experto|reto`, `--lesson clave|expuesto|login|rotar`, `--autostart` (salta el menú, modo kiosco), `--difficulty medio`, `--free` (modo libre), `--no-visual`.
 

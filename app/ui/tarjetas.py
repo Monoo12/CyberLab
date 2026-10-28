@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
-from app.ui import theme
+from app.ui import responsive, theme
 
 _BEATS = ("MIRAR", "ENTRAR", "LLEVARSE")
 
@@ -28,7 +28,8 @@ class TarjetasView(ctk.CTkFrame):
 
         wrap = ctk.CTkFrame(self, fg_color=theme.BG)
         wrap.place(relx=0.5, rely=0.5, anchor="center")
-        wrap.grid_columnconfigure(0, weight=1, minsize=680)
+        wrap.grid_columnconfigure(0, weight=1)
+        responsive.bind_minsize(wrap, 0, 680)
         self._wrap = wrap
         r = [0]
 

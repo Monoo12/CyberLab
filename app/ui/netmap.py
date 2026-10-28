@@ -6,7 +6,7 @@ from __future__ import annotations
 import tkinter as tk
 
 from app.leds import segments as seg
-from app.ui import theme
+from app.ui import responsive, theme
 
 # posiciones relativas (x, y) en [0,1]
 _POS = {
@@ -58,7 +58,12 @@ class NetworkMapPanel(tk.Frame):
         super().__init__(parent, bg=theme.BG_PANEL, highlightthickness=0)
         self.cfg = cfg
         self.mono = mono_font
-        self.canvas = tk.Canvas(self, bg=theme.BG_PANEL, highlightthickness=0, bd=0)
+        # fuentes vivas: siguen la escala de responsive sin redibujar el canvas
+        self._f_title = responsive.font(mono_font, 11, "bold")
+        self._f_label = responsive.font(mono_font, 8, "bold")
+        self._f_ip = responsive.font(mono_font, 7)
+        self.canvas = tk.Canvas(self, bg=theme.BG_PANEL, highlightthickness=0, bd=0,
+                                width=1, height=1)   # el tamano lo decide el layout
         self.canvas.pack(fill="both", expand=True)
         self._link_items: dict[tuple, int] = {}
         self._node_items: dict[str, dict] = {}
@@ -81,13 +86,13 @@ class NetworkMapPanel(tk.Frame):
         self._link_items.clear()
         self._node_items.clear()
         # titulo
-        c.create_text(12, 14, text="MAPA DE RED", anchor="w",
-                      fill=theme.DIM, font=(self.mono, 11, "bold"))
+        c.create_text(responsive.px(12), responsive.px(14), text="MAPA DE RED", anchor="w",
+                      fill=theme.DIM, font=self._f_title)
         # enlaces primero (van por debajo)
         for a, b in _LINKS:
             ax, ay = self._xy(a)
             bx, by = self._xy(b)
-            line = c.create_line(ax, ay, bx, by, fill=theme.LINK_IDLE, width=3)
+            line = c.create_line(ax, ay, bx, by, fill=theme.LINK_IDLE, width=self._lw(3))
             self._link_items[(a, b)] = line
         # nodos
         present_roles = {h.role for h in self.cfg.hosts} | {"switch-left", "switch-right"}
@@ -99,26 +104,31 @@ class NetworkMapPanel(tk.Frame):
     def _draw_node(self, role):
         c = self.canvas
         x, y = self._xy(role)
-        w = max(54, self._cw * 0.11)
-        h = max(26, self._ch * 0.05)
+        w = max(responsive.px(54), self._cw * 0.11)
+        h = max(responsive.px(26), self._ch * 0.05)
         rect = c.create_rectangle(x - w / 2, y - h / 2, x + w / 2, y + h / 2,
-                                  fill=theme.NODE_IDLE, outline=theme.DIM, width=2)
+                                  fill=theme.NODE_IDLE, outline=theme.DIM, width=self._lw(2))
         label = c.create_text(x, y, text=_LABEL.get(role, role.upper()),
-                              fill=theme.FG, font=(self.mono, 8, "bold"))
+                              fill=theme.FG, font=self._f_label)
         ip = ""
         host = next((hh for hh in self.cfg.hosts if hh.role == role), None)
         if host:
             ip = host.ip
-        iplabel = c.create_text(x, y + h / 2 + 9, text=ip, fill=theme.DIM,
-                                font=(self.mono, 7))
+        iplabel = c.create_text(x, y + h / 2 + responsive.px(9), text=ip, fill=theme.DIM,
+                                font=self._f_ip)
         self._node_items[role] = {"rect": rect, "label": label, "ip": iplabel}
+
+    @staticmethod
+    def _lw(width):
+        """Grosor de linea (px logicos) a la escala actual."""
+        return max(1, responsive.px(width))
 
     # ------------------------- animaciones -------------------------
     def _set_link(self, link, color, width=3):
         pair = link if link in self._link_items else (link[1], link[0])
         item = self._link_items.get(pair)
         if item:
-            self.canvas.itemconfig(item, fill=color, width=width)
+            self.canvas.itemconfig(item, fill=color, width=self._lw(width))
 
     def _set_node(self, role, fill=None, outline=None):
         n = self._node_items.get(role)

@@ -2,12 +2,13 @@
 
 Usa tkinter nativo (tk.Text/tk.Entry) para tener control fino de tags de color y
 del efecto typewriter. Se integra dentro de la ventana customtkinter sin problema.
+Las fuentes y paddings siguen la escala de app/ui/responsive.py.
 """
 from __future__ import annotations
 
 import tkinter as tk
 
-from app.ui import theme
+from app.ui import responsive, theme
 
 
 def _common_prefix(strings) -> str:
@@ -47,31 +48,33 @@ class TerminalPanel(tk.Frame):
             bg=theme.BG,
             fg=theme.FG,
             insertbackground=theme.GREEN,
-            font=(mono_font, 13),
+            font=responsive.font(mono_font, 13),
             bd=0,
             highlightthickness=0,
-            padx=14,
-            pady=10,
             wrap="word",
             state="disabled",
             spacing1=1,
             spacing3=1,
+            width=1,    # que no pida 80x24 caracteres: el ancho lo decide el layout
+            height=1,
         )
-        self.text.pack(fill="both", expand=True)
 
-        # Fila de prompt
+        # Fila de prompt (se empaqueta antes que el texto: si falta alto, se achica el texto)
         prow = tk.Frame(self, bg=theme.BG)
         prow.pack(fill="x", side="bottom")
+        self.text.pack(fill="both", expand=True)
         self.prompt = tk.Label(prow, text=" visitante@cyberlab:~$ ", bg=theme.BG,
-                               fg=theme.GREEN, font=(mono_font, 13, "bold"))
+                               fg=theme.GREEN, font=responsive.font(mono_font, 13, "bold"))
         self.prompt.pack(side="left")
         self.entry = tk.Entry(prow, bg=theme.BG, fg=theme.WHITE, insertbackground=theme.GREEN,
-                              font=(mono_font, 13), bd=0, highlightthickness=0)
-        self.entry.pack(side="left", fill="x", expand=True, ipady=6)
+                              font=responsive.font(mono_font, 13), bd=0, highlightthickness=0)
+        self.entry.pack(side="left", fill="x", expand=True)
         # Pista del modo guiado: "Enter para ejecutar" cuando hay un comando sugerido.
         self.suggest_hint = tk.Label(prow, text="", bg=theme.BG, fg=theme.CYAN,
-                                     font=(mono_font, 11, "bold"))
-        self.suggest_hint.pack(side="right", padx=8)
+                                     font=responsive.font(mono_font, 11, "bold"))
+        self.suggest_hint.pack(side="right")
+        self._rescale()
+        responsive.on_change(self, self._rescale)
         self.entry.bind("<Return>", self._submit)
         self.entry.bind("<Up>", self._history_prev)
         self.entry.bind("<Down>", self._history_next)
@@ -91,6 +94,11 @@ class TerminalPanel(tk.Frame):
         self.text.tag_config("banner", foreground=theme.GREEN)
 
         self._blink_prompt()
+
+    def _rescale(self):
+        self.text.configure(padx=responsive.px(14), pady=responsive.px(10))
+        self.entry.pack_configure(ipady=responsive.px(6))
+        self.suggest_hint.pack_configure(padx=responsive.px(8))
 
     # ------------------------------------------------------------------
     @property
