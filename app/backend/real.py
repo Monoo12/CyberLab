@@ -71,7 +71,7 @@ class RealBackend(NetworkBackend):
         cmd.append(ip)
         out = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=180).stdout
         results = []
-        for m in re.finditer(r"^(\d+)/tcp\s+(\w+)\s+(\S+)(?:\s+(.*))?$", out, re.M):
+        for m in re.finditer(r"^(\d+)/tcp[ \t]+(\w+)[ \t]+(\S+)(?:[ \t]+(.*))?$", out, re.M):
             svc = m.group(3)
             if versions and m.group(4):
                 svc = svc + " " + m.group(4).strip()
