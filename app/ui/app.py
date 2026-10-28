@@ -51,6 +51,9 @@ class MissionApp:
         self.root.bind("<Control-m>", lambda e: self.return_to_setup())
         self.root.bind("<F5>", lambda e: self.return_to_setup())
         self._fullscreen = False
+        if cfg.modes.fullscreen:
+            # despues de open_window (que puede maximizar con after(0))
+            self.root.after(300, self._toggle_fullscreen)
 
         self.mono = theme.pick_mono(self.root)
 
