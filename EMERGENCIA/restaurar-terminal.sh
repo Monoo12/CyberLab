@@ -4,7 +4,7 @@
 # ----------------------------------------------------------------------------
 #  Deja ESTA PC (la TERMINAL, no el file-server) EXACTAMENTE como estaba:
 #  dependencias del sistema, venv de Python, config real en modo REAL, serie
-#  del ESP (LEDs), kiosco en pantalla completa al boot y autologin.
+#  del ESP (LEDs) y kiosco en pantalla completa al iniciar sesión (SIN autologin).
 #
 #  Para cuando alguien borra/formatea la PC. Pasos:
 #     1) Recuperar el repo:   git clone https://github.com/Monoo12/CyberLab ~/CyberLab
@@ -23,7 +23,6 @@ set -euo pipefail
 EXPECT_USER="MUESTRANOBORRAR"      # usuario operador de la terminal
 IFACE="enp2s0"                     # placa de red de esta PC
 SERIAL_PORT="/dev/ttyUSB0"         # ESP (tira LED) por USB
-PLASMA_SESSION="plasma"            # sesion de sddm para el autologin
 
 # --- Rutas (derivadas, no tocar) -------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -242,20 +241,20 @@ EOF
 c_g "Autostart escrito en $AUTOSTART"
 
 # ============================================================================
-step "8) Autologin (sddm) del usuario operador"
-# Drop-in que sobreescribe lo necesario sin pisar la config de kubuntu.
-DROPIN="/etc/sddm.conf.d/95-cyberlab-autologin.conf"
-want="[Autologin]
-User=$(id -un)
-Session=$PLASMA_SESSION
-Relogin=false"
-if [ -f "$DROPIN" ] && diff -q <(printf '%s\n' "$want") "$DROPIN" >/dev/null 2>&1; then
-  c_g "Autologin ya configurado."
-else
+step "8) SIN autologin (sddm): la PC es compartida, se entra con contraseña"
+# Otras personas usan esta PC: NUNCA dejar autologin. Se quita cualquier
+# autologin previo (drop-in viejo de este script o User= en la config de sddm).
+# El kiosco igual arranca solo, pero recién DESPUÉS de loguearse con contraseña.
+OLD_DROPIN="/etc/sddm.conf.d/95-cyberlab-autologin.conf"
+if [ -f "$OLD_DROPIN" ] || grep -qs '^User=' /etc/sddm.conf /etc/sddm.conf.d/*.conf; then
   need_sudo
-  printf '%s\n' "$want" | $SUDO tee "$DROPIN" >/dev/null
-  c_g "Autologin configurado en $DROPIN (User=$(id -un), Session=$PLASMA_SESSION)."
-  c_y "Si al bootear no entra solo, verificá el nombre de sesión: 'ls /usr/share/wayland-sessions /usr/share/xsessions'."
+  $SUDO rm -f "$OLD_DROPIN"
+  for f in /etc/sddm.conf /etc/sddm.conf.d/*.conf; do
+    [ -f "$f" ] && grep -q '^User=' "$f" && $SUDO sed -i '/^User=/d' "$f"
+  done
+  c_g "Autologin quitado: al bootear pide usuario y contraseña."
+else
+  c_g "Sin autologin (correcto): al bootear pide usuario y contraseña."
 fi
 
 # ============================================================================
@@ -284,8 +283,8 @@ if [ "$ok" -eq 1 ]; then
   c_g "========================================================================"
   echo
   c_y "Para que quede 100% como estaba, FALTA:"
-  echo "   · REINICIAR -> el autologin + autostart arrancan el kiosco en pantalla completa."
-  echo "     (el grupo dialout y el autologin recién aplican tras reiniciar)."
+  echo "   · REINICIAR y loguearse como el operador (CON contraseña) -> el autostart abre el kiosco."
+  echo "     (el grupo dialout recién aplica tras reiniciar)."
   echo
   c_y "Pendientes que NO dependen del software de esta PC:"
   echo "   · Red del lab 192.168.10.0/24: esta PC debería tomar 192.168.10.10 (terminal)."

@@ -80,7 +80,7 @@ Si la IP que muestra el cartel no es `.20`, es por esto (no por el software).
 Reinstala y deja **esta PC = la TERMINAL** (estación del visitante)
 *exactamente* como estaba: dependencias del sistema, venv de Python, `config.toml`
 en **modo REAL**, acceso al **ESP** de la tira LED por USB, y arranque automático
-del **kiosco en pantalla completa** con autologin.
+del **kiosco en pantalla completa** al iniciar sesión (SIN autologin: la PC es compartida, se entra con contraseña).
 
 > Es **solo** para el equipo que hace de **TERMINAL** (usuario `MUESTRANOBORRAR`).
 > **No** instala el nodo vulnerable (`node/`) — eso es del FILE-SERVER.
@@ -112,7 +112,7 @@ ya esté hecho.
 | `config.toml` | **modo real**: `engine="real"`, `interface="enp2s0"`, serie `/dev/ttyUSB0`, `fullscreen=true` |
 | Serie (LEDs) | usuario agregado al grupo `dialout` (ESP en `/dev/ttyUSB0`) |
 | Kiosco al boot | `~/.config/autostart/cyberlab.desktop` → `run-terminal.sh --menu --fullscreen` |
-| Autologin | drop-in `/etc/sddm.conf.d/95-cyberlab-autologin.conf` (User=MUESTRANOBORRAR) |
+| Autologin | **desactivado a propósito**: el script quita cualquier `User=` de sddm (PC compartida) |
 
 > **config.toml:** no se versiona (patrón en `.gitignore`). El script lo escribe
 > con los valores reales de la terminal. Si alguna vez tu `config.toml` difiere y
