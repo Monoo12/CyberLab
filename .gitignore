@@ -23,3 +23,6 @@ node/**/__pycache__/
 Thumbs.db
 .vscode/
 .idea/
+
+# Snapshot local opcional del config (credenciales literales): no subir
+EMERGENCIA/config.toml.snapshot

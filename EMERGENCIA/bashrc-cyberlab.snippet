@@ -1,0 +1,26 @@
+# --- CyberLab rootless docker env ---
+export PATH="$HOME/bin:$PATH"
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DOCKER_HOST="unix:///run/user/$(id -u)/docker.sock"
+export CYBERLAB_NOSUDO=1
+
+# Cartelito de estado del FILE-SERVER (solo en shells interactivos).
+if [[ $- == *i* ]]; then
+    cyberlab_status() {
+        local ip state health http c=cyberlab-fileserver
+        ip=$(ip -4 -o addr show enp2s0 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+        state=$(timeout 3 docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null)
+        health=$(timeout 3 docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}-{{end}}' "$c" 2>/dev/null)
+        http=$(timeout 3 curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:80/" 2>/dev/null)
+        echo
+        if [[ "$state" == "running" && "$http" == "200" ]]; then
+            echo "  FILE-SERVER: UP  ✓   ip=${ip:-?}  web=http://${ip:-?}:80 [$http]  ssh=:2222  (${health})"
+        else
+            echo "  FILE-SERVER: ATENCION  ✗   estado='${state:-apagado}'  web='${http:-sin respuesta}'  ip=${ip:-?}"
+            echo "  -> revisá:  cd ~/CyberLab/node && ./fileserver.sh status   (o ./fileserver.sh on)"
+        fi
+        echo
+    }
+    cyberlab_status
+fi
+# --- end CyberLab ---
