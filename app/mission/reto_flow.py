@@ -27,6 +27,7 @@ _SEQ_KEYS = ("izq", "router", "der")
 class RetoController:
     SECONDS = 180
     PENALTY = 8
+    CLUE_DELAY_MS = 3000  # pausa entre que aparece la pregunta y el tablero da la pista
 
     def __init__(self, root, cfg, backend, reto, netmap, leds,
                  show_waiting, show_mission, on_return_menu=None, on_timer=None,
@@ -102,10 +103,19 @@ class RetoController:
     def _render_current(self):
         p = self.puzzles[self.idx]
         self._locked = False
+        self._accept = True
         self._seq_pos = 0
         self.reto.render_puzzle(self.idx + 1, len(self.puzzles), p["q"], p["clue"],
                                 p["type"], p.get("options"))
-        self._show_clue(p)
+        # Primero se lee la pregunta y despues arranca la pista en el tablero. En las
+        # secuencias no se puede tocar nada hasta que el patron termine de mostrarse.
+        self._cancel_clue()
+        if p["type"] == "sequence":
+            self._accept = False
+            self.reto.lock_answers(True)
+            self.reto.show_result("Lee la consigna... el patron arranca en un momento.",
+                                  theme.CYAN)
+        self._clue_job = self.root.after(self.CLUE_DELAY_MS, lambda: self._show_clue(p))
 
     def on_answer(self, value):
         if self.state != "playing" or self._locked or not self._accept:
@@ -198,7 +208,10 @@ class RetoController:
             for node_id in seg.NODE_LEDS:
                 self.leds.animate_node(node_id, seg.ANIM_PROCESS)
         elif kind == "broken_cable":
+            # toda la red en verde menos una luz del tramo 4, apagada a proposito (va despues
+            # de los SEG: cada SEG borra los rangos sueltos de PIX/ADD)
             self.leds.animate_segments(seg.ALL_SEGMENTS, seg.ANIM_FOCUS)
+            self.leds.animate_pixels(str(seg.BROKEN_CABLE_LED), seg.ANIM_OFF, replace=False)
         elif kind == "follow_signal":
             self._light_path(seg.segments_for_role("router"), 0)
         elif kind == "flashes":

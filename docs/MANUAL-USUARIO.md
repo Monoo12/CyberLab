@@ -101,8 +101,8 @@ capturás nodos; al 100% lográs **ACCESO ROOT**. Hay cronómetro (una respuesta
 tiempo) y al final un **RANGO de hacker** (APRENDIZ / HACKER / HACKER ÉLITE) según errores y tiempo. El
 **tablero** da las pistas; el botón **PISTA** las vuelve a mostrar. Tipos de acertijo:
 
-- **Elegir** (opción): contar los nodos que titilan, encontrar **el cable roto** (el LED quemado del
-  tablero), seguir la señal por la **canaleta**.
+- **Elegir** (opción): contar los nodos que titilan, encontrar **el cable roto** (una luz del tramo del
+  FILE-SERVER que se apaga a propósito), seguir la señal por la **canaleta**.
 - **Secuencia (tipo Simon)**: el tablero parpadea un patrón de nodos y hay que **repetirlo tocando**
   SW-IZQ / ROUTER / SW-DER en el mismo orden (hay uno corto y el final más largo = ACCESO ROOT).
 - **Keypad**: contar los destellos del **router** y cargar el número en el teclado en pantalla.

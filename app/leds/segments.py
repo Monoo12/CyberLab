@@ -12,7 +12,8 @@ cuenta a mano desde 1):
   id 2 = Tramo 3: router     <-> switch-der    LEDs 35..53  (36-54)
          Nodo 2:  switch-der                   LED  54      (55)
   id 3 = Tramo 4: switch-der <-> FILE-SERVER   LEDs 55..67  (56-68)
-El LED 62 (63 a mano) esta danado: el firmware no lo prende nunca.
+No hay LEDs danados (DEAD_LEDS vacio): el 62 (63 a mano) se reparo. El acertijo del cable
+roto del Reto apaga a proposito el 65 (66 a mano), cerca del FILE-SERVER (BROKEN_CABLE_LED).
 
 Cada SEG que enciende un tramo hace que el nodo del final de ese tramo titile unos
 segundos ("procesando") y despues quede como el tramo; la app no tiene que hacer nada
@@ -38,8 +39,11 @@ ALL_SEGMENTS: list[int] = [0, 1, 2, 3]
 SEGMENT_LEDS: dict[int, tuple[int, int]] = {0: (0, 12), 1: (14, 33), 2: (35, 53), 3: (55, 67)}
 NODE_LEDS: dict[int, int] = {0: 13, 1: 34, 2: 54}
 NODE_NAMES: dict[int, str] = {0: "switch-izq", 1: "router", 2: "switch-der"}
-DEAD_LEDS: list[int] = [62]
+DEAD_LEDS: list[int] = []  # espejo de DEAD_LEDS del firmware (el los apaga siempre)
 NUM_LEDS = 68
+# "Cable roto" del Reto: la app apaga este LED a proposito (ADD:<n>:OFF). Esta en el
+# tramo 4 (switch-der -> FILE-SERVER): la respuesta y la pista del acertijo asumen ese tramo.
+BROKEN_CABLE_LED = 65  # 66 a mano: a 2 luces del FILE-SERVER (elegido mirando el tablero)
 
 # Animaciones reconocidas por el firmware
 ANIM_DISCOVER = "DISCOVER"  # barrido suave al descubrir
@@ -55,6 +59,7 @@ ANIM_BLIP = "BLIP"          # ack rapido de cualquier comando (reacciona a todo)
 ANIM_ERROR = "ERROR"        # flash rojo de error (comando invalido / fallo)
 ANIM_OPEN = "OPEN"          # abrir carpeta: colores rapidos + degrade amarillo->verde
 ANIM_GLITCH = "GLITCH"      # caos de intrusion SOSTENIDO (nodos durante el exploit)
+ANIM_OFF = "OFF"            # apagado (sirve con PIX/ADD para apagar LEDs sueltos)
 
 
 def segments_for_role(role: str) -> list[int]:

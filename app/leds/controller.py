@@ -12,8 +12,15 @@ Protocolo de lineas (mismo que el firmware):
 
 Degrada con elegancia: si no hay dispositivo (o pyserial no esta), NO rompe la app;
 loguea por consola las lineas que enviaria, util para verificar la sincronia sin hardware.
+
+Se reconecta solo: si el ESP no estaba al arrancar o se desenchufa en medio, cada
+comando nuevo reintenta abrir el puerto (a lo sumo cada RETRY_SECONDS), asi los LEDs
+vuelven sin reiniciar el kiosco.
 """
 from __future__ import annotations
+
+import threading
+import time
 
 from app.leds import segments as seg
 
@@ -24,47 +31,108 @@ except Exception:  # pragma: no cover - opcional
 
 
 class LedController:
+    RETRY_SECONDS = 3.0  # sin dispositivo: cada cuanto se reintenta abrir el puerto
+    BOOT_SECONDS = 1.5   # al abrir, el NodeMCU se reinicia (ver _try_connect): lo que llegue
+                         # mientras bootea se encola y sale despues, en orden
+
     def __init__(self, port: str, baud: int = 115200, enabled: bool = True):
         self.port = port
         self.baud = baud
         self.enabled = enabled
         self._ser = None
         self._connected = False
+        self._closed = False
+        self._lock = threading.RLock()  # _send (hilo de Tk) vs. el timer que vacia la cola
+        self._next_retry = 0.0
+        self._ready_at = 0.0
+        self._pending: list[str] = []
+        self._flush_timer = None
+        self._warned = False  # ya se aviso que no hay dispositivo: no repetirlo en cada reintento
         if enabled:
             self._try_connect()
 
     def _try_connect(self) -> None:
+        self._next_retry = time.monotonic() + self.RETRY_SECONDS
         if serial is None:
-            print(f"[leds] pyserial no disponible -> modo log (sin dispositivo)")
+            if not self._warned:
+                print(f"[leds] pyserial no disponible -> modo log (sin dispositivo)")
+                self._warned = True
             return
         try:
-            # Abrir sin activar DTR/RTS: en el NodeMCU esas lineas van a RST y GPIO0.
+            # DTR/RTS en False: en el NodeMCU van a RST y GPIO0 (asi un reset nunca lo deja
+            # en modo flasheo). Ojo: en Linux el kernel igual las pulsa al abrir y el ESP se
+            # reinicia; por eso lo que se mande en los primeros BOOT_SECONDS se encola.
             ser = serial.Serial()
             ser.port = self.port
             ser.baudrate = self.baud
             ser.timeout = 0.2
+            ser.write_timeout = 0.5  # un USB colgado no debe congelar la UI
             ser.dtr = False
             ser.rts = False
             ser.open()
             self._ser = ser
             self._connected = True
+            self._warned = False
+            self._ready_at = time.monotonic() + self.BOOT_SECONDS
             print(f"[leds] conectado a {self.port} @ {self.baud}")
         except Exception as exc:  # dispositivo ausente/ocupado
-            print(f"[leds] sin dispositivo en {self.port} ({exc}) -> modo log")
+            if not self._warned:
+                print(f"[leds] sin dispositivo en {self.port} ({exc}) -> modo log; "
+                      f"reintento cada {self.RETRY_SECONDS:.0f}s")
+                self._warned = True
 
     @property
     def connected(self) -> bool:
         return self._connected
 
+    def _drop(self) -> None:
+        """Suelta el puerto (libera el ttyUSB para cuando se re-enchufe) y deja reintentar ya."""
+        if self._flush_timer is not None:
+            self._flush_timer.cancel()
+            self._flush_timer = None
+        self._pending.clear()
+        try:
+            if self._ser is not None:
+                self._ser.close()
+        except Exception:
+            pass
+        self._ser = None
+        self._connected = False
+        self._next_retry = 0.0
+
+    def _write(self, line: str) -> None:
+        try:
+            self._ser.write((line + "\n").encode("ascii", "ignore"))
+        except Exception as exc:
+            print(f"[leds] error de escritura ({exc}); se perdio el dispositivo, reintento")
+            self._drop()
+
+    def _flush(self) -> None:
+        with self._lock:
+            self._flush_timer = None
+            lines, self._pending = self._pending, []
+            for line in lines:
+                if not self._connected:
+                    break
+                self._write(line)
+
     def _send(self, line: str) -> None:
-        if self._connected and self._ser is not None:
-            try:
-                self._ser.write((line + "\n").encode("ascii", "ignore"))
-            except Exception as exc:
-                print(f"[leds] error de escritura ({exc}); paso a modo log")
-                self._connected = False
-        else:
-            print(f"[leds:log] {line}")
+        with self._lock:
+            if (self.enabled and not self._closed and not self._connected
+                    and time.monotonic() >= self._next_retry):
+                self._try_connect()
+            if not self._connected:
+                print(f"[leds:log] {line}")
+                return
+            wait = self._ready_at - time.monotonic()
+            if wait > 0 or self._pending:
+                self._pending.append(line)
+                if self._flush_timer is None:
+                    self._flush_timer = threading.Timer(max(wait, 0.0), self._flush)
+                    self._flush_timer.daemon = True
+                    self._flush_timer.start()
+                return
+            self._write(line)
 
     # --- API de alto nivel usada por el MissionController ---
     def idle(self) -> None:
@@ -94,10 +162,9 @@ class LedController:
         self.animate_segments(seg.segments_for_role(role), anim)
 
     def close(self) -> None:
-        if self._ser is not None:
-            try:
-                self.off()
-                self._ser.close()
-            except Exception:
-                pass
-        self._connected = False
+        with self._lock:
+            self._closed = True  # que ningun comando tardio lo vuelva a abrir
+            if self._connected:
+                self._pending.clear()
+                self._write("OFF")
+            self._drop()

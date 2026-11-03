@@ -24,8 +24,10 @@ paréntesis, la cuenta a mano desde 1.
 | Nodo 2 · switch-der | acento de cada animación | 1 | 54 (55) |
 | **Segmento 3** · Tramo 4 | switch-der → **FILE-SERVER** | 13 | 55–67 (56–68) |
 
-> **El LED 62 (63 contando a mano) está dañado y no se prende nunca**, con ningún comando: el firmware
-> lo fuerza a negro en cada frame (`DEAD_LEDS`).
+> **No hay LEDs dañados**: el 62 (63 contando a mano) se reparó en 10/2026 y `DEAD_LEDS` del firmware
+> quedó vacío. Si se quema alguno, agregalo ahí (y en `app/leds/segments.py`) y reflasheá: el firmware
+> lo fuerza a negro en cada frame. El acertijo del **cable roto** del Reto apaga a propósito el 65 (66 a mano,
+> cerca del FILE-SERVER) (`ADD:65:OFF` después de prender los tramos; `BROKEN_CABLE_LED` en `segments.py`).
 >
 > Los largos de los tramos están en `BRANCH_COUNTS` (sin contar los nodos); el inicio de cada tramo y
 > nodo se recalcula solo. Las animaciones corren en el sentido TERMINAL → FILE-SERVER; si la cadena
@@ -169,7 +171,7 @@ ALL:WIN                      (Mission Complete)
   toques eso salvo que cambies la fuente.
 - Para probar sin la app: `python tools/led_test.py --port COM3 SEG:3:EXPLOIT` o
   `... "PIX:0-12,35-53:FOCUS"` (ver `docs/GUIA-HARDWARE.md`).
-- Para revisar el tablero entero (tramos, nodos y LED dañado) en un solo paso:
+- Para revisar el tablero entero (tramos, nodos y cable roto del Reto) en un solo paso:
   `python tools/tablero_test.py` (ver la sección 7).
 
 ## 7. Prueba del tablero completo
@@ -179,5 +181,6 @@ prueba la conexión real. Fases (se puede correr una sola con `--fase N`):
 
 1. **Tramos uno por uno**: cada tramo se prende verde y el nodo de su final titila blanco y queda verde.
 2. **Nodos solos**: los LEDs 14, 35 y 55 (a mano) titilan de a uno y se apagan.
-3. **LED dañado**: toda la tira verde menos el 63; después solo del 61 al 65, con el 63 apagado en el medio.
+3. **LEDs dañados y cable roto**: toda la tira verde sin huecos (si hubiera LEDs en `DEAD_LEDS`, esos
+   apagados); después la pista del cable roto del Reto: la misma tira con el 66 apagado a propósito.
 4. **Ruta completa** (como un `traceroute` al FILE-SERVER): tramo, nodo procesando, tramo, y así hasta el final.
