@@ -1,4 +1,4 @@
-"""Prueba del tablero completo de LEDs: 4 tramos, 3 nodos que titilan y el LED danado.
+"""Prueba del tablero completo de LEDs: 4 tramos, 3 nodos que titilan y el cable roto del Reto.
 
 Uso:
     python tools/tablero_test.py               # todas las fases, puerto de config.toml
@@ -74,9 +74,10 @@ def fase_nodos(leds: LedController) -> None:
 
 
 def fase_danado(leds: LedController) -> None:
-    print("\n[3] LED danado")
+    print("\n[3] LEDs danados y cable roto del Reto")
     dead = ", ".join(str(d + 1) for d in seg.DEAD_LEDS)
-    print(f"  Toda la tira verde (los nodos titilan primero) menos el {dead}")
+    print(f"  Toda la tira verde (los nodos titilan primero) "
+          + (f"menos el {dead}" if dead else "sin ningun LED apagado"))
     leds.animate_all(seg.ANIM_FOCUS)
     time.sleep(5.0)
     for d in seg.DEAD_LEDS:
@@ -84,6 +85,12 @@ def fase_danado(leds: LedController) -> None:
         print(f"  Solo LEDs {a + 1}-{b + 1}: el {d + 1} apagado en el medio")
         leds.animate_pixels(f"{a}-{b}", seg.ANIM_FOCUS)
         time.sleep(4.0)
+    # la pista del acertijo, con los mismos comandos que manda el Reto
+    b = seg.BROKEN_CABLE_LED
+    print(f"  Cable roto del Reto: toda verde con el {b + 1} apagado a proposito")
+    leds.animate_segments(seg.ALL_SEGMENTS, seg.ANIM_FOCUS)
+    leds.animate_pixels(str(b), seg.ANIM_OFF, replace=False)
+    time.sleep(5.0)
 
 
 def fase_ruta(leds: LedController) -> None:

@@ -46,7 +46,7 @@ wordlist   = ["123456", "password", "admin", "qwerty", "S3cr3t-2024!", "letmein"
 
 [serial]
 enabled = true
-port    = "COM3"         # Windows: "COM3"  |  Linux: "/dev/ttyUSB0"
+port    = "COM3"         # Windows: "COM3"  |  Linux: "/dev/ttyUSB0" o mejor su nombre fijo en /dev/serial/by-id/
 baud    = 115200
 
 # ---------------------------------------------------------------------------

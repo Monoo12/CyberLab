@@ -22,7 +22,7 @@ set -euo pipefail
 # --- Lo que define a esta PC (ajustar solo si cambia el despliegue) ---------
 EXPECT_USER="MUESTRANOBORRAR"      # usuario operador de la terminal
 IFACE="enp2s0"                     # placa de red de esta PC
-SERIAL_PORT="/dev/ttyUSB0"         # ESP (tira LED) por USB
+SERIAL_PORT="/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0"  # ESP (tira LED): CH340, nombre fijo
 
 # --- Rutas (derivadas, no tocar) -------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -168,7 +168,7 @@ wordlist   = ["123456", "password", "admin", "qwerty", "S3cr3t-2024!", "letmein"
 
 [serial]
 enabled = true
-port    = "/dev/ttyUSB0"   # ESP de la tira LED (Linux)
+port    = "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0"  # CH340 del ESP: nombre fijo (udev), no cambia al re-enchufar como /dev/ttyUSBn
 baud    = 115200
 
 [[hosts]]
@@ -197,7 +197,7 @@ ip   = "192.168.10.40"
 name = "SECURITY-SERVER"
 role = "security"
 TOML
-  c_g "config.toml escrito (engine=real, interface=enp2s0, serie=/dev/ttyUSB0, fullscreen)."
+  c_g "config.toml escrito (engine=real, interface=enp2s0, serie=by-id del CH340, fullscreen)."
 fi
 
 # ============================================================================

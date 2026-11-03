@@ -71,9 +71,9 @@
 // Total 68. Si cambia el tablero, ajusta estos numeros (sin contar los nodos).
 const int BRANCH_COUNTS[NUM_BRANCHES] = { 13, 20, 19, 13 };
 
-// LEDs danados (numeracion desde 0): quedan siempre apagados.
-// 62 = el "LED 63" contando a mano, en el Tramo 4.
-const int DEAD_LEDS[] = { 62 };
+// LEDs danados (numeracion desde 0): quedan siempre apagados. Hoy ninguno (-1 = vacio).
+// Ej: { 62 } apaga el "LED 63" contando a mano (Tramo 4), roto hasta 2026-10.
+const int DEAD_LEDS[] = { -1 };
 const int NUM_DEAD = sizeof(DEAD_LEDS) / sizeof(DEAD_LEDS[0]);
 
 // Cuanto titila un nodo al "procesar" y cada cuanto cambia el parpadeo (ms).

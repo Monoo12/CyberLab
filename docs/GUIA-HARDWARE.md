@@ -103,12 +103,14 @@ después de ese punto (ver §7).
 1. Enchufá el micro por **USB** a la PC de la muestra.
 2. Averiguá el puerto:
    - Windows: Administrador de dispositivos → "Puertos (COM y LPT)" → `COMx`.
-   - Linux: `ls /dev/ttyUSB* /dev/ttyACM*` (suele ser `/dev/ttyUSB0`).
+   - Linux: `ls /dev/ttyUSB* /dev/ttyACM*` (suele ser `/dev/ttyUSB0`). Mejor usá su **nombre fijo**
+     `ls /dev/serial/by-id/` (ej. `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0` para un CH340): el
+     `ttyUSBn` puede cambiar al re-enchufar, el by-id no, y la app se reconecta sola si el ESP vuelve.
 3. Poné ese valor en `config.toml`:
    ```toml
    [serial]
    enabled = true
-   port    = "COM3"      # o "/dev/ttyUSB0"
+   port    = "COM3"      # o "/dev/serial/by-id/usb-..." (Linux)
    baud    = 115200
    ```
    En Linux puede hacer falta permisos del puerto: `sudo usermod -aG dialout $USER` (y volver a entrar).

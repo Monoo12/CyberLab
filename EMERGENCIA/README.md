@@ -109,8 +109,8 @@ ya esté hecho.
 | Paquetes apt | `python3-venv python3-tk python3-dev nmap arp-scan hydra git curl` |
 | Navegador | `google-chrome` (fallback `chromium`) para el paso `connect` |
 | venv | `~/CyberLab/.venv` con `requirements.txt` (customtkinter fijado **<6** → 5.2.x) |
-| `config.toml` | **modo real**: `engine="real"`, `interface="enp2s0"`, serie `/dev/ttyUSB0`, `fullscreen=true` |
-| Serie (LEDs) | usuario agregado al grupo `dialout` (ESP en `/dev/ttyUSB0`) |
+| `config.toml` | **modo real**: `engine="real"`, `interface="enp2s0"`, serie `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0` (nombre fijo del CH340), `fullscreen=true` |
+| Serie (LEDs) | usuario agregado al grupo `dialout` (ESP en `/dev/ttyUSB*`, con nombre fijo en `/dev/serial/by-id/`) |
 | Kiosco al boot | `~/.config/autostart/cyberlab.desktop` → `run-terminal.sh --menu --fullscreen` |
 | Autologin | **desactivado a propósito**: el script quita cualquier `User=` de sddm (PC compartida) |
 
@@ -126,6 +126,7 @@ Después de restaurar y reiniciar, verificá:
 - **Red del lab** `192.168.10.0/24`: esta PC debería tomar `192.168.10.10`.
 - El **FILE-SERVER** (`192.168.10.20`) tiene que estar **encendido** para el modo
   real; si no, la app cae a simulado como fallback.
-- El **ESP** de la tira LED enchufado por USB (aparece como `/dev/ttyUSB0`).
+- El **ESP** de la tira LED enchufado por USB (aparece como `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0`).
+  Si se enchufa tarde o se re-enchufa, la app lo retoma sola (no hace falta reiniciar el kiosco).
 - El **nombre de sesión** de sddm (`Session=plasma`): si al bootear no entra solo,
   revisá `ls /usr/share/wayland-sessions /usr/share/xsessions` y ajustá el drop-in.

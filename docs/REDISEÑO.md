@@ -52,8 +52,8 @@ Objetivo: **tomar el control de la red**. Una barra de CONTROL DE LA RED se llen
 físicos (router, switches, cable/canaleta) son las pistas; botón **PISTA** las repite.
 
 Tipos de acertijo (`app/mission/reto_flow.py` + `app/ui/reto.py`):
-- **Elegir**: contar los nodos que titilan; **el cable roto** (aprovecha el LED 62 quemado como acertijo
-  real del hardware); seguir la señal por la canaleta.
+- **Elegir**: contar los nodos que titilan; **el cable roto** (la app apaga a propósito el LED 65 (66 a mano), en el
+  tramo 4 cerca del FILE-SERVER, y hay que encontrarlo en la canaleta); seguir la señal por la canaleta.
 - **Secuencia (tipo Simon)**: el tablero parpadea un patrón de nodos y hay que repetirlo tocando
   SW-IZQ / ROUTER / SW-DER (uno corto y el final más largo). La interacción más "juego/hacker".
 - **Keypad**: cargar en pantalla el número de destellos del router.
